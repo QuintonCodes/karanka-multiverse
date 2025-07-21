@@ -13,7 +13,7 @@ import { createJSONStorage, persist } from "zustand/middleware";
 type UserType = Omit<User, "password"> & {
   payments: Payment[];
   transactions: Transaction[];
-  wallet: Wallet;
+  wallet: Wallet | null;
   subscriptions: Subscription[];
 };
 
