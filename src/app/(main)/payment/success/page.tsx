@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import MainSection from "@/components/ui/main-section";
 import { useAuth } from "@/context/auth-provider";
 import { formatPrice } from "@/lib/utils";
+import { Prisma } from "@prisma/client";
 
 export default function PaymentSuccessPage() {
   const searchParams = useSearchParams();
@@ -54,14 +55,14 @@ export default function PaymentSuccessPage() {
             if (tokens > 0) {
               updateUser({
                 wallet: {
-                  balance: tokens,
+                  balance: new Prisma.Decimal(tokens),
                   address: "",
                   id: "",
                   isVerified: false,
                   createdAt: new Date(),
                   updatedAt: new Date(),
                   userId: "",
-                  value: 0.0,
+                  value: new Prisma.Decimal(0),
                   chain: "",
                 },
               });
