@@ -1,7 +1,5 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Activity,
   Bell,
@@ -11,8 +9,10 @@ import {
 } from "lucide-react";
 import { motion } from "motion/react";
 
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+
 import MainSection from "@/components/ui/main-section";
-import { formatTime } from "@/lib/utils";
 
 const signals = [
   {
@@ -58,6 +58,19 @@ const stats = {
 };
 
 export default function DashboardPage() {
+  function formatTime(date: Date) {
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const minutes = Math.floor(diff / 60000);
+
+    if (minutes < 1) return "Just now";
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+  }
+
   return (
     <MainSection>
       <section className="w-full mx-auto px-4 py-32">

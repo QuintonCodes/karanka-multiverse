@@ -58,6 +58,13 @@ const verifySchema = z.object({
     .regex(/^\d+$/, "Verification code must only contain digits"),
 });
 
+const resendSchema = z.object({
+  email: z
+    .string()
+    .email("Please enter a valid email address")
+    .transform((val) => val.trim().toLowerCase()),
+});
+
 async function generateAndStoreOtp(email: string): Promise<string> {
   const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
@@ -96,31 +103,43 @@ async function validateOtp(email: string, code: string): Promise<boolean> {
 
 export async function registerUser(formData: FormData) {
   const data = {
-    firstName: formData.get("firstName") as string,
-    lastName: formData.get("lastName") as string,
-    email: formData.get("email") as string,
-    password: formData.get("password") as string,
-    confirmPassword: formData.get("confirmPassword") as string,
+    firstName: String(formData.get("firstName") ?? ""),
+    lastName: String(formData.get("lastName") ?? ""),
+    email: String(formData.get("email") ?? ""),
+    password: String(formData.get("password") ?? ""),
+    confirmPassword: String(formData.get("confirmPassword") ?? ""),
   };
 
+  const validatedData = registerSchema.safeParse(data);
+
+  if (!validatedData.success) {
+    const { fieldErrors } = validatedData.error.flatten();
+    return {
+      error: "Some of the form fields are invalid.",
+      details: fieldErrors,
+    };
+  }
+
+  const { firstName, lastName, email, password } = validatedData.data;
+
   try {
-    const validatedData = registerSchema.parse(data);
-
     const existingUser = await db.user.findUnique({
-      where: { email: validatedData.email },
+      where: { email },
     });
-
     if (existingUser) {
-      return { error: "User with this email already exists." };
+      return {
+        error:
+          "An account with this email already exists. Please log in or use a different email.",
+      };
     }
 
-    const hashedPassword = await hashPassword(validatedData.password);
+    const hashedPassword = await hashPassword(password);
 
     const user = await db.user.create({
       data: {
-        firstName: validatedData.firstName,
-        lastName: validatedData.lastName,
-        email: validatedData.email,
+        firstName,
+        lastName,
+        email,
         password: hashedPassword,
         isVerified: false,
       },
@@ -130,36 +149,50 @@ export async function registerUser(formData: FormData) {
       },
     });
 
-    const otpCode = await generateAndStoreOtp(validatedData.email);
-    await sendVerificationEmail(
-      validatedData.email,
-      otpCode,
-      validatedData.firstName
-    );
+    const otpCode = await generateAndStoreOtp(email);
+    await sendVerificationEmail(email, otpCode, firstName);
 
-    const { password, ...safeUser } = user;
-    void password;
+    const { password: _password, ...safeUser } = user;
+    void _password;
 
     return { success: true, user: safeUser };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return { error: error.errors[0].message };
+      return {
+        error:
+          "Invalid input data. Please check the form fields and try again.",
+        details: error.flatten().fieldErrors,
+      };
     }
-    return { error: "Registration failed. Please try again." };
+
+    return {
+      error:
+        "Unexpected server error during registration. Please try again or contact support.",
+    };
   }
 }
 
 export async function loginUser(formData: FormData) {
   const data = {
-    email: formData.get("email") as string,
-    password: formData.get("password") as string,
+    email: String(formData.get("email") ?? ""),
+    password: String(formData.get("password") ?? ""),
   };
 
-  try {
-    const validatedData = loginSchema.parse(data);
+  const validatedData = loginSchema.safeParse(data);
 
+  if (!validatedData.success) {
+    const { fieldErrors } = validatedData.error.flatten();
+    return {
+      error: "Validation failed.",
+      details: fieldErrors,
+    };
+  }
+
+  const { email, password } = validatedData.data;
+
+  try {
     const user = await db.user.update({
-      where: { email: validatedData.email },
+      where: { email },
       data: { lastLogin: new Date() },
       include: {
         wallet: true,
@@ -176,10 +209,7 @@ export async function loginUser(formData: FormData) {
       return { error: "Please verify your email before logging in" };
     }
 
-    const isValidPassword = await verifyPassword(
-      validatedData.password,
-      user.password
-    );
+    const isValidPassword = await verifyPassword(password, user.password);
 
     if (!isValidPassword) {
       return { error: "Invalid email or password" };
@@ -187,35 +217,50 @@ export async function loginUser(formData: FormData) {
 
     await createSession(user.id, user.email);
 
-    const { password, ...safeUser } = user;
-    void password;
+    const { password: _password, ...safeUser } = user;
+    void _password;
 
     return { success: true, user: safeUser };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return { error: error.errors[0].message };
+      return {
+        error: "Validation failed.",
+        details: error.flatten().fieldErrors,
+      };
     }
-    return { error: "Login failed. Please try again." };
+    return {
+      error:
+        "Unexpected server error during login. Please try again or contact support.",
+    };
   }
 }
 
 export async function verifyEmail(formData: FormData) {
   const data = {
-    email: formData.get("email") as string,
-    code: formData.get("code") as string,
+    email: String(formData.get("email") ?? ""),
+    code: String(formData.get("code") ?? ""),
   };
 
+  const validatedData = verifySchema.safeParse(data);
+
+  if (!validatedData.success) {
+    const { fieldErrors } = validatedData.error.flatten();
+    return {
+      error: "Some of the form fields are invalid.",
+      details: fieldErrors,
+    };
+  }
+
+  const { email, code } = validatedData.data;
+
   try {
-    const validatedData = verifySchema.parse(data);
-
-    const isValid = await validateOtp(validatedData.email, validatedData.code);
-
+    const isValid = await validateOtp(email, code);
     if (!isValid) {
       return { error: "Invalid or expired verification code" };
     }
 
     const user = await db.user.update({
-      where: { email: validatedData.email },
+      where: { email },
       data: { isVerified: true, lastLogin: new Date() },
       include: {
         wallet: true,
@@ -248,13 +293,19 @@ export async function verifyEmail(formData: FormData) {
 }
 
 export async function resendVerificationCode(formData: FormData) {
-  const email = formData.get("email") as string;
+  const email = String(formData.get("email") ?? "");
+  const validatedData = resendSchema.safeParse({ email });
+
+  if (!validatedData.success) {
+    const { fieldErrors } = validatedData.error.flatten();
+    return {
+      error: fieldErrors.email?.[0] ?? "Invalid email address",
+    };
+  }
 
   try {
-    const validatedData = verifySchema.parse({ email, code: "" });
-
     const user = await db.user.findUnique({
-      where: { email: validatedData.email },
+      where: { email: validatedData.data.email },
     });
     if (!user) {
       return { error: "User not found" };
@@ -263,9 +314,6 @@ export async function resendVerificationCode(formData: FormData) {
     if (user.isVerified) {
       return { error: "Email is already verified" };
     }
-
-    // Remove any existing OTP for this email from the database
-    await db.otpCode.deleteMany({ where: { email } });
 
     // Generate new OTP
     const otpCode = await generateAndStoreOtp(email);

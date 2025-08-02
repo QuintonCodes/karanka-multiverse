@@ -3,7 +3,7 @@ import { createContext, useContext, useState } from "react";
 import { createStore, StoreApi, useStore } from "zustand";
 import { persist } from "zustand/middleware";
 
-type CartItem = Product & {
+export type CartItem = Product & {
   quantity: number;
 };
 

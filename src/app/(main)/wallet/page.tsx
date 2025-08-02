@@ -31,12 +31,12 @@ import MainSection from "@/components/ui/main-section";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/context/auth-provider";
+import { useMetaMaskStore } from "@/lib/stores/metamask-store";
 import { formatPrice } from "@/lib/utils";
 
 export default function WalletPage() {
   const { user } = useAuth();
-
-  const isMetaMaskConnected = false;
+  const { isConnected: isMetaMaskConnected } = useMetaMaskStore();
 
   function getStatusIcon(status: string) {
     switch (status) {
@@ -85,13 +85,13 @@ export default function WalletPage() {
               Wallet Management
             </h1>
             <p className="mt-2 text-[#EBEBEB]/70">
-              Manage your MetaMask wallet, Karanka Tokens, and other
+              Manage your MetaMask wallet, KRKUNI tokens, and other
               cryptocurrencies securely
             </p>
           </motion.div>
 
           {/* Quick Stats */}
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <Card className="border-[#EBEBEB]/10 bg-[#11120E]">
               <CardContent className="p-4">
                 <div className="flex items-center space-x-3">
@@ -116,26 +116,10 @@ export default function WalletPage() {
                   </div>
                   <div>
                     <div className="text-sm text-[#EBEBEB]/70">
-                      Platform Tokens
+                      KRKUNI Balance
                     </div>
                     <div className="font-semibold text-[#EBEBEB]">
-                      {Number(user?.wallet?.balance) || 0}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-[#EBEBEB]/10 bg-[#11120E]">
-              <CardContent className="p-4">
-                <div className="flex items-center space-x-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-500/10">
-                    <TrendingUp className="h-5 w-5 text-green-500" />
-                  </div>
-                  <div>
-                    <div className="text-sm text-[#EBEBEB]/70">KRK Balance</div>
-                    <div className="font-semibold text-[#EBEBEB]">
-                      {Number(user?.wallet?.balance || 0).toFixed(4)}
+                      {Number(user?.wallet?.balance || 0).toFixed(2)}
                     </div>
                   </div>
                 </div>
@@ -153,7 +137,7 @@ export default function WalletPage() {
                       Portfolio Value
                     </div>
                     <div className="font-semibold text-[#EBEBEB]">
-                      {formatPrice(Number(user?.wallet?.value) || 0)}
+                      {formatPrice(Number(user?.wallet?.value || 0))}
                     </div>
                   </div>
                 </div>
@@ -263,7 +247,7 @@ export default function WalletPage() {
                     Common wallet operations and shortcuts
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-3">
+                <CardContent className="space-y-3 text-[#EBEBEB]">
                   <Button
                     variant="outline"
                     className="w-full justify-start border-[#EBEBEB]/20 hover:border-[#EBEBEB]/40 bg-transparent"
@@ -277,10 +261,10 @@ export default function WalletPage() {
                   <Button
                     variant="outline"
                     className="w-full justify-start border-[#EBEBEB]/20 hover:border-[#EBEBEB]/40 bg-transparent"
-                    // onClick={() => setActiveTab("crypto")}
+                    // onClick={() => setActiveTab("history")}
                   >
-                    <Shield className="mr-2 h-4 w-4" />
-                    Manage Crypto Assets
+                    <Clock className="mr-2 h-4 w-4" />
+                    Check History
                     <ArrowUpRight className="ml-auto h-4 w-4" />
                   </Button>
 
@@ -307,49 +291,22 @@ export default function WalletPage() {
             </div>
 
             {/* Portfolio Overview */}
-            <Card className="border-[#EBEBEB]/10 bg-[#11120E]">
-              <CardHeader>
-                <CardTitle className="text-[#EBEBEB]">
-                  Portfolio Overview
-                </CardTitle>
-                <CardDescription className="text-[#EBEBEB]/70">
-                  Your cryptocurrency holdings and their current values
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex items-center justify-between space-x-4">
-                <div className="mb-6">
-                  <div className="text-3xl font-bold text-[#EBEBEB]">
-                    {formatPrice(Number(user?.wallet?.value || 0))}
+            <Card className="border-[#EBEBEB]/10 bg-gradient-to-r from-yellow-500/10 to-orange-500/10">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-[#EBEBEB]">
+                      Token Balance
+                    </h3>
+                    <p className="text-3xl font-bold text-[#EBEBEB]">
+                      {Number(user?.wallet?.balance || 0).toFixed(2)} (
+                      {formatPrice(Number(user?.wallet?.value || 0))})
+                    </p>
+                    <p className="text-sm text-[#EBEBEB]/70">
+                      Available tokens
+                    </p>
                   </div>
-                  <div className="text-sm text-[#EBEBEB]/70">
-                    Total Portfolio Value
-                  </div>
-                </div>
-
-                <div className="w-full max-w-xs">
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="rounded-lg border border-[#EBEBEB]/10 bg-[#121C2B]/30 p-4"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium text-[#EBEBEB]">KRK</span>
-                      <Badge
-                        variant="outline"
-                        className="border-[#EBEBEB]/20 text-[#EBEBEB]/70"
-                      >
-                        KRK
-                      </Badge>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="text-lg font-semibold text-[#EBEBEB]">
-                        {Number(user?.wallet?.balance || 0).toFixed(6)}
-                      </div>
-                      <div className="text-sm text-[#EBEBEB]/70">
-                        {formatPrice(Number(user?.wallet?.value || 0))}
-                      </div>
-                    </div>
-                  </motion.div>
+                  <Zap className="h-12 w-12 text-yellow-400" />
                 </div>
               </CardContent>
             </Card>

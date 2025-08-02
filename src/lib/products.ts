@@ -1,4 +1,9 @@
-import { calculatePackagePricing } from "./utils";
+import {
+  bnbToZarRate,
+  calculatePackagePricing,
+  calculateZarPrice,
+  usdToZarRate,
+} from "./utils";
 
 export type Product = {
   id: string;
@@ -13,49 +18,69 @@ export type Product = {
 };
 
 export const products: Product[] = [
-  {
-    id: "trading-signal-bot",
-    name: "Trading Signal Bot",
-    description:
-      "Get real-time trading signals directly to your dashboard. Make informed trading decisions with our advanced algorithm.",
-    price: 100,
-    zarPrice: 100 * 18.5,
-    tokens: 25,
-    image: "/placeholder.svg",
-    isSubscription: false,
-  },
-  {
-    id: "trading-signal-subscription",
-    name: "Weekly Signal Subscription",
-    description:
-      "Subscribe to our weekly trading signals service. Perfect for active traders who need constant market insights.",
-    price: 25,
-    zarPrice: 25 * 18.5,
-    tokens: 6.25,
-    image: "/placeholder.svg",
-    isSubscription: true,
-  },
-  {
-    id: "drone-flight-lessons",
-    name: "Monthly Drone Flight Lessons",
-    description:
-      "Learn to fly drones with our comprehensive monthly lessons. Perfect for beginners and intermediate pilots.",
-    price: 50,
-    zarPrice: 50 * 18.5,
-    tokens: 12.5,
-    image: "/placeholder.svg",
-    unavailable: true,
-  },
-  {
-    id: "trading-lessons",
-    name: "Trading Lessons",
-    description:
-      "One month of comprehensive trading lessons. Learn strategies, risk management, and technical analysis from experts.",
-    price: 80,
-    zarPrice: 80 * 18.5,
-    tokens: 20,
-    image: "/placeholder.svg",
-  },
+  (() => {
+    const price = 100;
+    const zarPrice = calculateZarPrice(price, usdToZarRate);
+
+    return {
+      id: "trading-signal-bot",
+      name: "Trading Signal Bot",
+      description:
+        "Get real-time trading signals directly to your dashboard. Make informed trading decisions with our advanced algorithm.",
+      price,
+      zarPrice,
+      tokens: 25,
+      image: "/products/trading-bot.webp",
+      isSubscription: false,
+    };
+  })(),
+  (() => {
+    const price = 25;
+    const zarPrice = calculateZarPrice(price, usdToZarRate);
+
+    return {
+      id: "trading-signal-subscription",
+      name: "Weekly Signal Subscription",
+      description:
+        "Subscribe to our weekly trading signals service. Perfect for active traders who need constant market insights.",
+      price,
+      zarPrice,
+      tokens: 6.25,
+      image: "/products/signals.webp",
+      isSubscription: true,
+    };
+  })(),
+  (() => {
+    const price = 50;
+    const zarPrice = calculateZarPrice(price, usdToZarRate);
+
+    return {
+      id: "drone-flight-lessons",
+      name: "Monthly Drone Flight Lessons",
+      description:
+        "Learn to fly drones with our comprehensive monthly lessons. Perfect for beginners and intermediate pilots.",
+      price,
+      zarPrice,
+      tokens: 12.5,
+      image: "/products/drone.webp",
+      unavailable: true,
+    };
+  })(),
+  (() => {
+    const price = 80;
+    const zarPrice = calculateZarPrice(price, usdToZarRate);
+
+    return {
+      id: "trading-lessons",
+      name: "Trading Lessons",
+      description:
+        "One month of comprehensive trading lessons. Learn strategies, risk management, and technical analysis from experts.",
+      price,
+      zarPrice,
+      tokens: 20,
+      image: "/products/trading-lessons.webp",
+    };
+  })(),
 ];
 
 export type Package = {
@@ -75,8 +100,8 @@ export const packages: Package[] = [
   (() => {
     const { zarPrice, bnbValue, tokensToSend } = calculatePackagePricing(
       { usdPrice: 100, tokenAmount: 500 },
-      17.71, // USD to ZAR rate
-      12987.6 // BNB to ZAR rate
+      usdToZarRate,
+      bnbToZarRate
     );
 
     return {
@@ -98,9 +123,9 @@ export const packages: Package[] = [
   })(),
   (() => {
     const { zarPrice, bnbValue, tokensToSend } = calculatePackagePricing(
-      { usdPrice: 100, tokenAmount: 500 },
-      17.71, // USD to ZAR rate
-      12987.6 // BNB to ZAR rate
+      { usdPrice: 180, tokenAmount: 500 },
+      usdToZarRate,
+      bnbToZarRate // BNB to ZAR rate
     );
 
     return {
@@ -126,8 +151,8 @@ export const packages: Package[] = [
   (() => {
     const { zarPrice, bnbValue, tokensToSend } = calculatePackagePricing(
       { usdPrice: 300, tokenAmount: 500 },
-      17.71, // USD to ZAR rate
-      12987.6 // BNB to ZAR rate
+      usdToZarRate,
+      bnbToZarRate
     );
     return {
       id: "premium",

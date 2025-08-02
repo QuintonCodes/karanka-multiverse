@@ -1,13 +1,14 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import MainSection from "@/components/ui/main-section";
-import { useCart } from "@/context/cart-provider";
-import { formatPrice } from "@/lib/utils";
 import { ArrowRight, ShoppingCart, Trash2 } from "lucide-react";
 import { motion } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
+
+import { Button } from "@/components/ui/button";
+import MainSection from "@/components/ui/main-section";
+import { type CartItem, useCart } from "@/context/cart-provider";
+import { calculateZarPrice, formatPrice, usdToZarRate } from "@/lib/utils";
 
 export default function CartPage() {
   const { items, removeItem, getTotalPrice, clearCart } = useCart();
@@ -54,94 +55,111 @@ export default function CartPage() {
 
                   <div className="divide-y divide-[#EBEBEB]/10">
                     {items.map((item) => (
-                      <motion.div
+                      <CartItem
                         key={item.id}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="flex items-center justify-between py-4"
-                      >
-                        <div className="flex items-center">
-                          <div className="relative mr-4">
-                            {/* TODO: Adjust this properly */}
-                            <Image
-                              src={item.image}
-                              alt={item.name}
-                              width={48}
-                              height={48}
-                              className="object-cover rounded-full"
-                            />
-                          </div>
-                          <div>
-                            <h3 className="font-medium text-[#EBEBEB]">
-                              {item.name}
-                            </h3>
-                            <div className="flex items-center space-x-2 text-sm text-[#EBEBEB]/70">
-                              <span>${item.price}</span>
-                              <span>or {item.tokens} Tokens</span>
-                            </div>
-                          </div>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeItem(item.id)}
-                          className="text-red-500 hover:text-red-600 hover:bg-transparent hover:scale-110"
-                        >
-                          <Trash2 className="h-5 w-5" />
-                        </Button>
-                      </motion.div>
+                        item={item}
+                        removeItem={removeItem}
+                      />
                     ))}
                   </div>
                 </div>
               </div>
             </div>
 
-            <div>
-              <div className="rounded-xl border border-[#EBEBEB]/10 bg-[#11120E] p-6">
-                <h2 className="mb-4 text-xl font-semibold text-[#EBEBEB]">
-                  Order Summary
-                </h2>
+            <div className="rounded-xl border border-[#EBEBEB]/10 bg-[#11120E] p-6">
+              <h2 className="mb-4 text-xl font-semibold text-[#EBEBEB]">
+                Order Summary
+              </h2>
 
-                <div className="space-y-2">
-                  <div className="flex justify-between text-[#EBEBEB]/70">
-                    <span>Subtotal</span>
-                    <span>${getTotalPrice().toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between text-[#EBEBEB]/70">
-                    <span>ZAR Equivalent</span>
-                    <span>{formatPrice(getTotalPrice() * 18.5)}</span>
-                  </div>
+              <div className="space-y-2">
+                <div className="flex justify-between text-[#EBEBEB]/70">
+                  <span>Subtotal</span>
+                  <span>{formatPrice(getTotalPrice(), "USD")}</span>
                 </div>
-
-                <div className="my-4 border-t border-[#EBEBEB]/10 pt-4">
-                  <div className="flex justify-between font-semibold text-[#1E2E48]">
-                    <span>Total</span>
-                    <span>${getTotalPrice().toFixed(2)}</span>
-                  </div>
-                  <div className="mt-1 text-right text-sm text-[#EBEBEB]/70">
-                    {formatPrice(getTotalPrice() * 18.5)}
-                  </div>
+                <div className="flex justify-between text-[#EBEBEB]/70">
+                  <span>ZAR Equivalent</span>
+                  <span>
+                    {formatPrice(
+                      calculateZarPrice(getTotalPrice(), usdToZarRate)
+                    )}
+                  </span>
                 </div>
+              </div>
 
-                <Button
-                  className="mt-4 w-full border border-[#EBEBEB]/20 bg-gradient-to-r from-[#121C2B] to-[#11120E] hover:border-[#EBEBEB]/40"
-                  asChild
-                >
-                  <Link href="/checkout">
-                    Proceed to Checkout
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-
-                <div className="mt-4 text-center text-xs text-[#EBEBEB]/50">
-                  Payments are processed securely via PayFast
+              <div className="my-4 border-t border-[#EBEBEB]/10 pt-4">
+                <div className="flex justify-between font-semibold text-[#1E2E48]">
+                  <span>Total</span>
+                  <span>${getTotalPrice().toFixed(2)}</span>
                 </div>
+                <div className="mt-1 text-right text-sm text-[#EBEBEB]/70">
+                  {formatPrice(
+                    calculateZarPrice(getTotalPrice(), usdToZarRate)
+                  )}
+                </div>
+              </div>
+
+              <Button
+                className="mt-4 w-full border border-[#EBEBEB]/20 bg-gradient-to-r from-[#121C2B] to-[#11120E] hover:border-[#EBEBEB]/40"
+                asChild
+              >
+                <Link href="/checkout">
+                  Proceed to Checkout
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+
+              <div className="mt-4 text-center text-xs text-[#EBEBEB]/50">
+                Payments are processed securely via PayFast
               </div>
             </div>
           </div>
         )}
       </section>
     </MainSection>
+  );
+}
+
+function CartItem({
+  item,
+  removeItem,
+}: {
+  item: CartItem;
+  removeItem: (id: string) => void;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="flex items-center justify-between py-4"
+    >
+      <div className="flex items-center">
+        <div className="relative mr-4">
+          {/* TODO: Adjust this properly */}
+          <Image
+            src={item.image}
+            alt={item.name}
+            width={48}
+            height={48}
+            className="object-cover rounded-full"
+          />
+        </div>
+        <div>
+          <h3 className="font-medium text-[#EBEBEB]">{item.name}</h3>
+          <div className="flex items-center space-x-2 text-sm text-[#EBEBEB]/70">
+            <span>${item.price}</span>
+            <span>or {item.tokens} Tokens</span>
+          </div>
+        </div>
+      </div>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => removeItem(item.id)}
+        className="text-red-500 hover:text-red-600 hover:bg-transparent hover:scale-110"
+      >
+        <Trash2 className="h-5 w-5" />
+      </Button>
+    </motion.div>
   );
 }

@@ -23,7 +23,7 @@ type AuthStore = {
   isLoading: boolean;
   setUser: (user?: UserType | null) => void;
   logout: () => Promise<void>;
-  updateUser: (user: Partial<UserType>) => void;
+  updateUser: (user?: Partial<UserType>) => void;
 };
 
 type SessionResponse = {

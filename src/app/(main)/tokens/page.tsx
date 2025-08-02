@@ -104,7 +104,8 @@ export default function TokensPage() {
             >
               <Zap className="h-5 w-5 text-yellow-400" />
               <span className="text-[#EBEBEB]">
-                Current Balance: {user.wallet?.balance.toNumber()} tokens
+                Current Balance: {Number(user.wallet?.balance || 0).toFixed(2)}{" "}
+                tokens
               </span>
             </motion.div>
           )}
@@ -233,7 +234,9 @@ function TokenPackageCard({ pkg, handlePurchase, index }: TokenPackageProps) {
               <span className="text-4xl font-bold text-[#EBEBEB]">
                 {pkg.tokens}
               </span>
-              <span className="ml-2 text-lg text-[#EBEBEB]/70">tokens</span>
+              <span className="ml-2 text-lg text-[#EBEBEB]/70">
+                KRKUNI tokens
+              </span>
             </div>
             <div className="space-y-1">
               <div className="text-2xl font-bold text-[#EBEBEB]">

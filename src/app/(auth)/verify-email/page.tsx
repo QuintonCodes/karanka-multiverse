@@ -1,7 +1,5 @@
 "use client";
 
-import { resendVerificationCode, verifyEmail } from "@/app/actions/auth";
-import MainSection from "@/components/ui/main-section";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AlertCircle, CheckCircle, Clock, Mail, RefreshCw } from "lucide-react";
 import { motion } from "motion/react";
@@ -10,6 +8,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import z from "zod";
 
+import { resendVerificationCode, verifyEmail } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -24,6 +23,7 @@ import {
   InputOTPGroup,
   InputOTPSlot,
 } from "@/components/ui/input-otp";
+import MainSection from "@/components/ui/main-section";
 import { useAuth } from "@/context/auth-provider";
 import { useVerificationTimers } from "@/hooks/use-verification-timers";
 
@@ -46,8 +46,8 @@ export default function VerifyEmailPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const emailFromUrl = searchParams.get("email") || "";
-  const { setUser } = useAuth();
 
+  const { setUser } = useAuth();
   const {
     expiresAt,
     timeRemaining,
@@ -56,11 +56,7 @@ export default function VerifyEmailPage() {
     startExpiry,
   } = useVerificationTimers(null, 0);
 
-  const formatTime = (ms: number): string => {
-    const minutes = Math.floor(ms / 60000);
-    const seconds = Math.floor((ms % 60000) / 1000);
-    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-  };
+  const isExpired = timeRemaining === 0 && expiresAt !== null;
 
   const verifyForm = useForm<VerifyForm>({
     resolver: zodResolver(verifySchema),
@@ -82,20 +78,27 @@ export default function VerifyEmailPage() {
     formData.append("email", values.email);
     formData.append("code", values.code);
 
-    const result = await verifyEmail(formData);
+    try {
+      const result = await verifyEmail(formData);
 
-    if (result.error) {
-      toast.error("Verification failed", {
-        description: result.error || "Please try verifying again",
+      if (result.error) {
+        toast.error("Verification failed", {
+          description: result.error || "Please try verifying again",
+        });
+        return;
+      }
+
+      setUser(result.user);
+
+      toast.success("Email verified successfully. You are now logged in.");
+      verifyForm.reset();
+      router.push("/");
+    } catch (error) {
+      toast.error("Something went wrong", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
       });
-      return;
     }
-
-    setUser(result.user);
-
-    toast.success("Email verified successfully. You are now logged in.");
-    verifyForm.reset();
-    router.push("/");
   }
 
   async function handleResendCode() {
@@ -123,7 +126,11 @@ export default function VerifyEmailPage() {
     toast.success("Verification code has been sent!");
   }
 
-  const isExpired = timeRemaining === 0 && expiresAt !== null;
+  function formatTime(ms: number): string {
+    const minutes = Math.floor(ms / 60000);
+    const seconds = Math.floor((ms % 60000) / 1000);
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+  }
 
   return (
     <MainSection className="px-4 py-32 flex items-center justify-center">

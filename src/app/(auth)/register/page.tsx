@@ -31,6 +31,7 @@ import {
 import { Input } from "@/components/ui/input";
 import MainSection from "@/components/ui/main-section";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useMetaMaskStore } from "@/lib/stores/metamask-store";
 
 const registerSchema = z
   .object({
@@ -48,11 +49,11 @@ const registerSchema = z
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const router = useRouter();
 
-  const connectedWallet = false;
+  const { isConnected } = useMetaMaskStore();
 
   const registerForm = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -66,20 +67,31 @@ export default function RegisterPage() {
   });
 
   async function onSubmit(data: RegisterFormValues) {
-    try {
-      const formData = new FormData();
-      Object.entries(data).forEach(([key, value]) => {
-        if (key !== "confirmPassword") {
-          formData.append(key, value.toString());
-        }
-      });
+    const formData = new FormData();
+    Object.entries(data).forEach(([key, value]) => {
+      formData.append(key, value.toString());
+    });
 
+    try {
       const result = await registerUser(formData);
 
       if (result.error) {
-        toast.error("Registration failed", {
-          description: result.error || "Please try registering again.",
-        });
+        if (result.details) {
+          Object.entries(result.details).forEach(([field, messages]) => {
+            if (messages && messages.length > 0) {
+              registerForm.setError(field as keyof RegisterFormValues, {
+                type: "server",
+                message: messages[0],
+              });
+            }
+          });
+
+          toast.error("Please correct the highlighted fields.");
+        } else {
+          toast.error("Registration Failed", {
+            description: result.error || "An unexpected error occurred.",
+          });
+        }
         return;
       }
 
@@ -88,9 +100,9 @@ export default function RegisterPage() {
       });
 
       registerForm.reset();
-      router.push("/login");
+      router.push("/verify-email?email=" + encodeURIComponent(data.email));
     } catch (error) {
-      toast.error("Error during registration", {
+      toast.error("Something went wrong", {
         description:
           error instanceof Error ? error.message : "Please try again.",
       });
@@ -280,7 +292,7 @@ export default function RegisterPage() {
                   >
                     {registerForm.formState.isSubmitting
                       ? "Creating account..."
-                      : "Create Account & Wallet"}
+                      : "Create Account"}
                   </Button>
                 </form>
               </Form>
@@ -299,12 +311,8 @@ export default function RegisterPage() {
                     <span>Verify your email address</span>
                   </li>
                   <li className="flex items-center space-x-2">
-                    <Wallet className="h-3 w-3 text-[#EBEBEB]/50" />
-                    <span>Get your crypto wallet</span>
-                  </li>
-                  <li className="flex items-center space-x-2">
                     <Shield className="h-3 w-3 text-[#EBEBEB]/50" />
-                    <span>Start trading securely</span>
+                    <span>Start buying trading signal</span>
                   </li>
                 </ol>
               </div>
@@ -327,7 +335,7 @@ export default function RegisterPage() {
               {/* MetaMask Connect */}
               <MetaMaskConnect />
 
-              {connectedWallet && (
+              {isConnected && (
                 <div className="space-y-4">
                   <div className="rounded-lg border border-green-400/20 bg-green-400/10 p-4">
                     <div className="flex items-center space-x-2 mb-2">

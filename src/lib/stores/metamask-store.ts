@@ -5,6 +5,8 @@ type MetaMaskState = {
   balance: string;
   chainId: string;
   isConnected: boolean;
+  isInstalled: boolean;
+  setIsInstalled: (installed: boolean) => void;
   setWallet: (wallet: {
     address: string;
     balance: string;
@@ -18,6 +20,8 @@ export const useMetaMaskStore = create<MetaMaskState>((set) => ({
   balance: "0",
   chainId: "",
   isConnected: false,
+  isInstalled: false,
+  setIsInstalled: (installed) => set({ isInstalled: installed }),
   setWallet: ({ address, balance, chainId }) =>
     set({ address, balance, chainId, isConnected: true }),
   disconnect: () =>

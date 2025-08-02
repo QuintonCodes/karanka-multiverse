@@ -1,5 +1,10 @@
 "use client";
 
+import { CheckCircle, Copy, ExternalLink, Wallet } from "lucide-react";
+import { motion } from "motion/react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+
 import { saveWalletToDB } from "@/app/actions/wallet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,10 +19,6 @@ import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/context/auth-provider";
 import { MetaMaskService } from "@/lib/metamask";
 import { useMetaMaskStore } from "@/lib/stores/metamask-store";
-import { motion } from "framer-motion";
-import { CheckCircle, Copy, ExternalLink, Wallet } from "lucide-react";
-import { useState } from "react";
-import { toast } from "sonner";
 
 type MetaMaskConnectProps = {
   onConnect?: (address: string) => void;
@@ -30,10 +31,27 @@ export function MetaMaskConnect({
   showBalance = true,
   compact = false,
 }: MetaMaskConnectProps) {
-  const { address, balance, chainId, setWallet, disconnect, isConnected } =
-    useMetaMaskStore();
+  const {
+    address,
+    balance,
+    chainId,
+    setWallet,
+    disconnect,
+    isConnected,
+    isInstalled,
+    setIsInstalled,
+  } = useMetaMaskStore();
   const [copied, setCopied] = useState(false);
   const { user } = useAuth();
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const service = MetaMaskService.getInstance();
+      setIsInstalled(service.isInstalled());
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [setIsInstalled]);
 
   async function handleConnect() {
     try {
@@ -64,7 +82,7 @@ export function MetaMaskConnect({
     setTimeout(() => setCopied(false), 2000);
   }
 
-  if (!isConnected) {
+  if (!isInstalled) {
     return (
       <Card className="border-[#EBEBEB]/10 bg-[#11120E]">
         <CardHeader className="text-center">

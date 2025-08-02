@@ -1,7 +1,33 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  Camera,
+  Eye,
+  EyeOff,
+  History,
+  Settings,
+  Wallet,
+  Zap,
+} from "lucide-react";
+import { motion } from "motion/react";
+import { useRef, useState } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { z } from "zod";
+
+import { updateAccount, uploadAvatar } from "@/app/actions/account";
+import { MetaMaskConnect } from "@/components/metamask-connect";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -14,87 +40,126 @@ import { Input } from "@/components/ui/input";
 import MainSection from "@/components/ui/main-section";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/context/auth-provider";
+import { accountSchema, avatarSchema } from "@/lib/schemas/account";
 import { formatPrice } from "@/lib/utils";
-import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  Camera,
-  Eye,
-  EyeOff,
-  History,
-  Settings,
-  Wallet,
-  Zap,
-} from "lucide-react";
-import { motion } from "motion/react";
-import Image from "next/image";
-import { useRef, useState } from "react";
-import { useForm } from "react-hook-form";
-import { toast } from "sonner";
-import { z } from "zod";
-
-import { MetaMaskConnect } from "@/components/metamask-connect";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-
-const accountSchema = z.object({
-  firstName: z.string().min(2, "First name must be at least 2 characters"),
-  lastName: z.string().min(2, "Last name must be at least 2 characters"),
-  email: z.string().email("Please enter a valid email address"),
-  address: z.string().min(5, "Address must be at least 5 characters"),
-  city: z.string().min(2, "City must be at least 2 characters"),
-  postalCode: z.string().min(4, "Postal code must be at least 4 characters"),
-  walletAddress: z.string().optional(),
-});
 
 type AccountFormValues = z.infer<typeof accountSchema>;
+type AvatarFormValues = z.infer<typeof avatarSchema>;
 
 export default function AccountPage() {
-  const { user, updateUser } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [activeTab, setActiveTab] = useState("profile");
-  const [isEditing, setIsEditing] = useState(false);
   const [showWalletAddress, setShowWalletAddress] = useState(false);
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const { user, updateUser } = useAuth();
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const avatarForm = useForm<AvatarFormValues>({
+    resolver: zodResolver(avatarSchema),
+    defaultValues: {
+      avatar: undefined,
+    },
+  });
 
-  const handleAvatarUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setIsUploadingAvatar(true);
-
-    setAvatarUrl(file.name);
-  };
-
-  const form = useForm<AccountFormValues>({
+  const userForm = useForm<AccountFormValues>({
     resolver: zodResolver(accountSchema),
     defaultValues: {
       firstName: user?.firstName || "",
       lastName: user?.lastName || "",
       email: user?.email || "",
-      address: "",
-      city: "",
-      postalCode: "",
-      walletAddress: user?.wallet?.address || "",
+      address: user?.address || "",
+      city: user?.city || "",
+      postalCode: user?.postalCode || "",
     },
   });
 
-  const onSubmit = async (data: AccountFormValues) => {
-    setIsSubmitting(true);
-    updateUser(data);
-    setIsEditing(false);
-    toast.success("Profile updated successfully!");
-  };
+  async function handleAvatarUpload(data: AvatarFormValues) {
+    const file = data.avatar;
+    if (!file) {
+      toast.error("Please select an image to upload.");
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Only image files are allowed.");
+      return;
+    }
+
+    const maxSizeMB = 5;
+    if (file.size > maxSizeMB * 1024 * 1024) {
+      toast.error(`Image must be less than ${maxSizeMB}MB.`);
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("avatar", file);
+
+    try {
+      const result = await uploadAvatar(formData);
+
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+
+      toast.success("Avatar uploaded successfully!");
+      updateUser(result.user);
+      avatarForm.reset();
+    } catch (error) {
+      console.error("Avatar upload failed:", error);
+      toast.error("Unexpected error during upload. Please try again.");
+    }
+  }
+
+  async function onSubmit(data: AccountFormValues) {
+    const formData = new FormData();
+    formData.append("firstName", data.firstName);
+    formData.append("lastName", data.lastName);
+    formData.append("email", data.email);
+    formData.append("address", data.address);
+    formData.append("city", data.city);
+    formData.append("postalCode", data.postalCode);
+
+    try {
+      const result = await updateAccount(formData);
+
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+
+      toast.success("Account updated successfully!");
+      updateUser(result.user);
+      userForm.reset();
+    } catch (error) {
+      console.error("Error updating account:", error);
+      toast.error(
+        "Unexpected server error while updating account. Please try again later."
+      );
+    }
+  }
+
+  function formatDate(date: Date) {
+    return new Intl.DateTimeFormat("en-ZA", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(date);
+  }
+
+  function getStatusColor(status: string) {
+    switch (status) {
+      case "completed":
+        return "text-green-400 border-green-400/20";
+      case "pending":
+        return "text-yellow-400 border-yellow-400/20";
+      case "failed":
+        return "text-red-400 border-red-400/20";
+      default:
+        return "text-[#EBEBEB]/70 border-[#EBEBEB]/20";
+    }
+  }
 
   if (!user) {
     // return (
@@ -108,31 +173,7 @@ export default function AccountPage() {
     //     </div>
     //   </MainSection>
     // );
-    console.log("Cool");
   }
-
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat("en-ZA", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(date);
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "completed":
-        return "text-green-400 border-green-400/20";
-      case "pending":
-        return "text-yellow-400 border-yellow-400/20";
-      case "failed":
-        return "text-red-400 border-red-400/20";
-      default:
-        return "text-[#EBEBEB]/70 border-[#EBEBEB]/20";
-    }
-  };
 
   return (
     <MainSection>
@@ -151,34 +192,68 @@ export default function AccountPage() {
           <div className="lg:col-span-1">
             <div className="rounded-xl border border-[#EBEBEB]/10 bg-[#11120E] p-6">
               <div className="mb-6 text-center">
-                <div className="relative mx-auto mb-4 h-20 w-20">
-                  <div className="relative overflow-hidden">
-                    <Image
-                      src={user?.avatarUrl || avatarUrl || "/placeholder.svg"}
-                      alt="User Avatar"
-                      className="rounded-full object-cover"
-                      fill
+                <Form {...avatarForm}>
+                  <form onSubmit={avatarForm.handleSubmit(handleAvatarUpload)}>
+                    <FormField
+                      control={avatarForm.control}
+                      name="avatar"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <div className="relative mx-auto mb-4 h-20 w-20">
+                              <div
+                                className="relative overflow-hidden cursor-pointer"
+                                onClick={() => fileInputRef.current?.click()}
+                              >
+                                <Avatar className="size-20">
+                                  <AvatarImage
+                                    src={user?.avatarUrl || "/placeholder.svg"}
+                                    alt="User Avatar"
+                                    className="object-cover border border-[#EBEBEB]/20"
+                                  />
+                                  <AvatarFallback className="text-[#11120E]">
+                                    {user?.firstName?.charAt(0) || "U"}
+                                  </AvatarFallback>
+                                </Avatar>
+                              </div>
+
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                ref={fileInputRef}
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    field.onChange(file);
+                                    avatarForm.handleSubmit(
+                                      handleAvatarUpload
+                                    )();
+                                  }
+                                }}
+                              />
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (!field.value)
+                                    fileInputRef.current?.click();
+                                }}
+                                className="absolute bottom-0 right-0 flex h-6 w-6 items-center justify-center rounded-full bg-[#EBEBEB] text-[#11120E] hover:bg-[#EBEBEB]/90 transition-colors cursor-pointer"
+                              >
+                                {avatarForm.formState.isSubmitting ? (
+                                  <div className="h-3 w-3 animate-spin rounded-full border border-[#11120E] border-t-transparent" />
+                                ) : (
+                                  <Camera className="h-3 w-3" />
+                                )}
+                              </button>
+                            </div>
+                          </FormControl>
+                        </FormItem>
+                      )}
                     />
-                  </div>
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isUploadingAvatar}
-                    className="absolute bottom-0 right-0 flex h-6 w-6 items-center justify-center rounded-full bg-[#EBEBEB] text-[#11120E] hover:bg-[#EBEBEB]/90 transition-colors"
-                  >
-                    {isUploadingAvatar ? (
-                      <div className="h-3 w-3 animate-spin rounded-full border border-[#11120E] border-t-transparent" />
-                    ) : (
-                      <Camera className="h-3 w-3" />
-                    )}
-                  </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleAvatarUpload}
-                    className="hidden"
-                  />
-                </div>
+                  </form>
+                </Form>
                 <h3 className="font-semibold text-[#EBEBEB]">
                   {user?.firstName || "First Name"}{" "}
                   {user?.lastName || "Last Name"}
@@ -198,7 +273,7 @@ export default function AccountPage() {
 
               <Tabs
                 value={activeTab}
-                onValueChange={(value) => setActiveTab(value)}
+                onValueChange={setActiveTab}
                 orientation="vertical"
                 className="gap-4"
               >
@@ -226,42 +301,6 @@ export default function AccountPage() {
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
-
-              {/* <nav className="space-y-2">
-                <button
-                  onClick={() => setActiveTab("profile")}
-                  className={`flex w-full items-center space-x-3 rounded-lg px-3 py-2 text-left transition-colors ${
-                    activeTab === "profile"
-                      ? "bg-[#121C2B]/50 text-[#EBEBEB]"
-                      : "text-[#EBEBEB]/70 hover:bg-[#121C2B]/30 hover:text-[#EBEBEB]"
-                  }`}
-                >
-                  <Settings className="h-5 w-5" />
-                  <span>Profile</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab("wallet")}
-                  className={`flex w-full items-center space-x-3 rounded-lg px-3 py-2 text-left transition-colors ${
-                    activeTab === "wallet"
-                      ? "bg-[#121C2B]/50 text-[#EBEBEB]"
-                      : "text-[#EBEBEB]/70 hover:bg-[#121C2B]/30 hover:text-[#EBEBEB]"
-                  }`}
-                >
-                  <Wallet className="h-5 w-5" />
-                  <span>Wallet</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab("transactions")}
-                  className={`flex w-full items-center space-x-3 rounded-lg px-3 py-2 text-left transition-colors ${
-                    activeTab === "transactions"
-                      ? "bg-[#121C2B]/50 text-[#EBEBEB]"
-                      : "text-[#EBEBEB]/70 hover:bg-[#121C2B]/30 hover:text-[#EBEBEB]"
-                  }`}
-                >
-                  <History className="h-5 w-5" />
-                  <span>Transactions</span>
-                </button>
-              </nav> */}
             </div>
           </div>
 
@@ -269,10 +308,7 @@ export default function AccountPage() {
           <div className="lg:col-span-3">
             <Card className="border-[#EBEBEB]/10 bg-[#11120E]">
               <CardContent className="p-8">
-                <Tabs
-                  value={activeTab}
-                  onValueChange={(value) => setActiveTab(value)}
-                >
+                <Tabs value={activeTab} onValueChange={setActiveTab}>
                   <TabsContent value="profile">
                     <motion.div
                       initial={{ opacity: 0, y: 20 }}
@@ -287,23 +323,16 @@ export default function AccountPage() {
                             Update your personal details and preferences
                           </p>
                         </div>
-                        <Button
-                          onClick={() => setIsEditing(!isEditing)}
-                          variant="outline"
-                          className="border-[#EBEBEB]/20 hover:border-[#EBEBEB]/40 bg-transparent"
-                        >
-                          {isEditing ? "Cancel" : "Edit Profile"}
-                        </Button>
                       </div>
 
-                      <Form {...form}>
+                      <Form {...userForm}>
                         <form
-                          onSubmit={form.handleSubmit(onSubmit)}
+                          onSubmit={userForm.handleSubmit(onSubmit)}
                           className="space-y-6"
                         >
                           <div className="grid gap-4 sm:grid-cols-2">
                             <FormField
-                              control={form.control}
+                              control={userForm.control}
                               name="firstName"
                               render={({ field }) => (
                                 <FormItem>
@@ -313,7 +342,7 @@ export default function AccountPage() {
                                   <FormControl>
                                     <Input
                                       {...field}
-                                      disabled={!isEditing}
+                                      disabled={userForm.formState.isSubmitting}
                                       className="border-[#EBEBEB]/20 bg-[#121C2B]/30 text-[#EBEBEB] focus-visible:border-[#EBEBEB]/40 focus-visible:ring-[#EBEBEB]/20 disabled:opacity-50"
                                     />
                                   </FormControl>
@@ -323,7 +352,7 @@ export default function AccountPage() {
                             />
 
                             <FormField
-                              control={form.control}
+                              control={userForm.control}
                               name="lastName"
                               render={({ field }) => (
                                 <FormItem>
@@ -333,7 +362,7 @@ export default function AccountPage() {
                                   <FormControl>
                                     <Input
                                       {...field}
-                                      disabled={!isEditing}
+                                      disabled={userForm.formState.isSubmitting}
                                       className="border-[#EBEBEB]/20 bg-[#121C2B]/30 text-[#EBEBEB] focus-visible:border-[#EBEBEB]/40 focus-visible:ring-[#EBEBEB]/20 disabled:opacity-50"
                                     />
                                   </FormControl>
@@ -344,7 +373,7 @@ export default function AccountPage() {
                           </div>
 
                           <FormField
-                            control={form.control}
+                            control={userForm.control}
                             name="email"
                             render={({ field }) => (
                               <FormItem>
@@ -354,7 +383,7 @@ export default function AccountPage() {
                                 <FormControl>
                                   <Input
                                     {...field}
-                                    disabled={!isEditing}
+                                    disabled={userForm.formState.isSubmitting}
                                     className="border-[#EBEBEB]/20 bg-[#121C2B]/30 text-[#EBEBEB] focus-visible:border-[#EBEBEB]/40 focus-visible:ring-[#EBEBEB]/20 disabled:opacity-50"
                                   />
                                 </FormControl>
@@ -364,7 +393,7 @@ export default function AccountPage() {
                           />
 
                           <FormField
-                            control={form.control}
+                            control={userForm.control}
                             name="address"
                             render={({ field }) => (
                               <FormItem>
@@ -374,7 +403,7 @@ export default function AccountPage() {
                                 <FormControl>
                                   <Input
                                     {...field}
-                                    disabled={!isEditing}
+                                    disabled={userForm.formState.isSubmitting}
                                     placeholder="Enter your address"
                                     className="border-[#EBEBEB]/20 bg-[#121C2B]/30 text-[#EBEBEB] focus-visible:border-[#EBEBEB]/40 focus-visible:ring-[#EBEBEB]/20 disabled:opacity-50"
                                   />
@@ -386,7 +415,7 @@ export default function AccountPage() {
 
                           <div className="grid gap-4 sm:grid-cols-2">
                             <FormField
-                              control={form.control}
+                              control={userForm.control}
                               name="city"
                               render={({ field }) => (
                                 <FormItem>
@@ -396,7 +425,7 @@ export default function AccountPage() {
                                   <FormControl>
                                     <Input
                                       {...field}
-                                      disabled={!isEditing}
+                                      disabled={userForm.formState.isSubmitting}
                                       placeholder="Enter your city"
                                       className="border-[#EBEBEB]/20 bg-[#121C2B]/30 text-[#EBEBEB] focus-visible:border-[#EBEBEB]/40 focus-visible:ring-[#EBEBEB]/20 disabled:opacity-50"
                                     />
@@ -407,7 +436,7 @@ export default function AccountPage() {
                             />
 
                             <FormField
-                              control={form.control}
+                              control={userForm.control}
                               name="postalCode"
                               render={({ field }) => (
                                 <FormItem>
@@ -417,7 +446,7 @@ export default function AccountPage() {
                                   <FormControl>
                                     <Input
                                       {...field}
-                                      disabled={!isEditing}
+                                      disabled={userForm.formState.isSubmitting}
                                       placeholder="Enter postal code"
                                       className="border-[#EBEBEB]/20 bg-[#121C2B]/30 text-[#EBEBEB] focus-visible:border-[#EBEBEB]/40 focus-visible:ring-[#EBEBEB]/20 disabled:opacity-50"
                                     />
@@ -428,15 +457,15 @@ export default function AccountPage() {
                             />
                           </div>
 
-                          {isEditing && (
-                            <Button
-                              type="submit"
-                              disabled={isSubmitting}
-                              className="bg-gradient-to-r from-[#121C2B] to-[#11120E] border border-[#EBEBEB]/20 hover:border-[#EBEBEB]/40"
-                            >
-                              {isSubmitting ? "Saving..." : "Save Changes"}
-                            </Button>
-                          )}
+                          <Button
+                            type="submit"
+                            disabled={userForm.formState.isSubmitting}
+                            className="bg-gradient-to-r from-[#121C2B] to-[#11120E] border border-[#EBEBEB]/20 hover:border-[#EBEBEB]/40"
+                          >
+                            {userForm.formState.isSubmitting
+                              ? "Saving..."
+                              : "Save Changes"}
+                          </Button>
                         </form>
                       </Form>
                     </motion.div>
@@ -466,7 +495,9 @@ export default function AccountPage() {
                                   Token Balance
                                 </h3>
                                 <p className="text-3xl font-bold text-[#EBEBEB]">
-                                  {Number(user?.wallet?.balance || 0)}
+                                  {Number(user?.wallet?.balance || 0).toFixed(
+                                    2
+                                  )}
                                 </p>
                                 <p className="text-sm text-[#EBEBEB]/70">
                                   Available tokens
@@ -497,48 +528,30 @@ export default function AccountPage() {
                             </CardDescription>
                           </CardHeader>
                           <CardContent>
-                            <Form {...form}>
-                              <FormField
-                                control={form.control}
-                                name="walletAddress"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormControl>
-                                      <div className="relative">
-                                        <Input
-                                          type={
-                                            showWalletAddress
-                                              ? "text"
-                                              : "password"
-                                          }
-                                          {...field}
-                                          placeholder="Enter your wallet address"
-                                          className="border-[#EBEBEB]/20 bg-[#11120E] text-[#EBEBEB] focus-visible:border-[#EBEBEB]/40 focus-visible:ring-[#EBEBEB]/20 pr-10"
-                                        />
-                                        <Button
-                                          type="button"
-                                          variant="ghost"
-                                          size="icon"
-                                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                                          onClick={() =>
-                                            setShowWalletAddress(
-                                              !showWalletAddress
-                                            )
-                                          }
-                                        >
-                                          {showWalletAddress ? (
-                                            <EyeOff className="h-4 w-4 text-[#EBEBEB]/70" />
-                                          ) : (
-                                            <Eye className="h-4 w-4 text-[#EBEBEB]/70" />
-                                          )}
-                                        </Button>
-                                      </div>
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
+                            <div className="relative">
+                              <Input
+                                type={showWalletAddress ? "text" : "password"}
+                                readOnly
+                                value={user?.wallet?.address || ""}
+                                placeholder="0x1234...abcd"
+                                className="border-[#EBEBEB]/20 bg-[#11120E] text-[#EBEBEB] focus-visible:border-[#EBEBEB]/40 focus-visible:ring-[#EBEBEB]/20 pr-10"
                               />
-                            </Form>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                                onClick={() =>
+                                  setShowWalletAddress(!showWalletAddress)
+                                }
+                              >
+                                {showWalletAddress ? (
+                                  <EyeOff className="h-4 w-4 text-[#EBEBEB]/70" />
+                                ) : (
+                                  <Eye className="h-4 w-4 text-[#EBEBEB]/70" />
+                                )}
+                              </Button>
+                            </div>
                           </CardContent>
                         </Card>
                       </div>
@@ -559,7 +572,7 @@ export default function AccountPage() {
                         </p>
                       </div>
 
-                      {user?.transactions.length === 0 ? (
+                      {!user?.transactions ? (
                         <Card className="border-[#EBEBEB]/10 bg-[#121C2B]/30">
                           <CardContent className="py-12 text-center">
                             <History className="mx-auto mb-4 h-12 w-12 text-[#EBEBEB]/30" />
@@ -573,48 +586,49 @@ export default function AccountPage() {
                         </Card>
                       ) : (
                         <div className="space-y-4">
-                          {user?.transactions.map((transaction) => (
-                            <Card
-                              key={transaction.id}
-                              className="border-[#EBEBEB]/10 bg-[#121C2B]/30"
-                            >
-                              <CardContent className="p-4">
-                                <div className="flex items-center justify-between">
-                                  <div>
-                                    <div className="flex items-center space-x-2">
-                                      <Badge
-                                        variant="outline"
-                                        className={`border-[#EBEBEB]/20 ${getStatusColor(transaction.status)}`}
-                                      >
-                                        {transaction.status.toUpperCase()}
-                                      </Badge>
+                          {user?.transactions &&
+                            user.transactions.map((transaction) => (
+                              <Card
+                                key={transaction.id}
+                                className="border-[#EBEBEB]/10 bg-[#121C2B]/30"
+                              >
+                                <CardContent className="p-4">
+                                  <div className="flex items-center justify-between">
+                                    <div>
+                                      <div className="flex items-center space-x-2">
+                                        <Badge
+                                          variant="outline"
+                                          className={`border-[#EBEBEB]/20 ${getStatusColor(transaction.status)}`}
+                                        >
+                                          {transaction.status.toUpperCase()}
+                                        </Badge>
+                                      </div>
+                                      <div className="mt-1 flex items-center space-x-4 text-sm text-[#EBEBEB]/70">
+                                        <span>
+                                          {formatDate(transaction.timestamp)}
+                                        </span>
+                                        <span>
+                                          Method:{" "}
+                                          {transaction.paymentMethod.toUpperCase()}
+                                        </span>
+                                        {/* {transaction.tokens && <span>Tokens: {transaction.tokens}</span>} */}
+                                      </div>
                                     </div>
-                                    <div className="mt-1 flex items-center space-x-4 text-sm text-[#EBEBEB]/70">
-                                      <span>
-                                        {formatDate(transaction.timestamp)}
-                                      </span>
-                                      <span>
-                                        Method:{" "}
-                                        {transaction.paymentMethod.toUpperCase()}
-                                      </span>
-                                      {/* {transaction.tokens && <span>Tokens: {transaction.tokens}</span>} */}
+                                    <div className="text-right">
+                                      <div className="font-medium text-[#EBEBEB]">
+                                        ${transaction.amount.toFixed(2)}
+                                      </div>
+                                      <div className="text-sm text-[#EBEBEB]/70">
+                                        {formatPrice(
+                                          Number(transaction.amount || 0)
+                                        )}
+                                        {/* Price amount */}
+                                      </div>
                                     </div>
                                   </div>
-                                  <div className="text-right">
-                                    <div className="font-medium text-[#EBEBEB]">
-                                      ${transaction.amount.toFixed(2)}
-                                    </div>
-                                    <div className="text-sm text-[#EBEBEB]/70">
-                                      {formatPrice(
-                                        Number(transaction.amount || 0)
-                                      )}
-                                      {/* Price amount */}
-                                    </div>
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          ))}
+                                </CardContent>
+                              </Card>
+                            ))}
                         </div>
                       )}
                     </motion.div>
@@ -622,234 +636,6 @@ export default function AccountPage() {
                 </Tabs>
               </CardContent>
             </Card>
-
-            {/* <div className="rounded-xl border border-[#EBEBEB]/10 bg-[#11120E] p-8">
-              {activeTab === "profile" && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                >
-                  <div className="mb-6 flex items-center justify-between">
-                    <h2 className="text-2xl font-bold text-[#EBEBEB]">
-                      Profile Information
-                    </h2>
-                    <Button
-                      onClick={() => setIsEditing(!isEditing)}
-                      variant="outline"
-                      className="border-[#EBEBEB]/20 hover:border-[#EBEBEB]/40 bg-transparent"
-                    >
-                      {isEditing ? "Cancel" : "Edit Profile"}
-                    </Button>
-                  </div>
-
-                  <Form {...form}>
-                    <form
-                      onSubmit={form.handleSubmit(onSubmit)}
-                      className="space-y-6"
-                    >
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <FormField
-                          control={form.control}
-                          name="firstName"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>First Name</FormLabel>
-                              <FormControl>
-                                <Input
-                                  {...field}
-                                  disabled={!isEditing}
-                                  className="border-[#EBEBEB]/20 bg-[#121C2B]/30 focus-visible:border-[#EBEBEB]/40 focus-visible:ring-[#EBEBEB]/20 disabled:opacity-50"
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="lastName"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Last Name</FormLabel>
-                              <FormControl>
-                                <Input
-                                  {...field}
-                                  disabled={!isEditing}
-                                  className="border-[#EBEBEB]/20 bg-[#121C2B]/30 focus-visible:border-[#EBEBEB]/40 focus-visible:ring-[#EBEBEB]/20 disabled:opacity-50"
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <FormField
-                        control={form.control}
-                        name="email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Email Address</FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                disabled={!isEditing}
-                                className="border-[#EBEBEB]/20 bg-[#121C2B]/30 focus-visible:border-[#EBEBEB]/40 focus-visible:ring-[#EBEBEB]/20 disabled:opacity-50"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      {isEditing && (
-                        <Button
-                          type="submit"
-                          className="border border-[#EBEBEB]/20 bg-gradient-to-r from-[#121C2B] to-[#11120E] hover:border-[#EBEBEB]/40"
-                        >
-                          Save Changes
-                        </Button>
-                      )}
-                    </form>
-                  </Form>
-                </motion.div>
-              )}
-
-              {activeTab === "wallet" && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                >
-                  <h2 className="mb-6 text-2xl font-bold text-[#EBEBEB]">
-                    Wallet Information
-                  </h2>
-
-                  <div className="mb-8 rounded-lg border border-[#EBEBEB]/10 bg-[#121C2B]/30 p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="text-lg font-semibold text-[#EBEBEB]">
-                          Token Balance
-                        </h3>
-                        <p className="text-3xl font-bold text-[#EBEBEB]">
-                          {Number(user?.wallet?.balance) || 0}
-                        </p>
-                        <p className="text-sm text-[#EBEBEB]/70">
-                          Available tokens
-                        </p>
-                      </div>
-                      <Wallet className="h-12 w-12 text-[#EBEBEB]/50" />
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-[#EBEBEB] mb-2">
-                        Wallet Address
-                      </label>
-                      <div className="relative">
-                        <Input
-                          type={showWalletAddress ? "text" : "password"}
-                          value={user?.wallet?.address || "Not set"}
-                          onChange={(e) =>
-                            // updateUser({
-                            //   wallet: {
-                            //     ...user?.wallet,
-                            //     value: user?.wallet.value,
-                            //     address: e.target.value,
-                            //   },
-                            // })
-                            console.log(e.target.value)
-                          }
-                          className="border-[#EBEBEB]/20 bg-[#121C2B]/30 focus-visible:border-[#EBEBEB]/40 focus-visible:ring-[#EBEBEB]/20 pr-10"
-                          placeholder="Enter your wallet address"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                          onClick={() =>
-                            setShowWalletAddress(!showWalletAddress)
-                          }
-                        >
-                          {showWalletAddress ? (
-                            <EyeOff className="h-4 w-4 text-[#EBEBEB]/70" />
-                          ) : (
-                            <Eye className="h-4 w-4 text-[#EBEBEB]/70" />
-                          )}
-                        </Button>
-                      </div>
-                      <p className="mt-2 text-xs text-[#EBEBEB]/50">
-                        Your cryptocurrency wallet address for token
-                        transactions
-                      </p>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-
-              {activeTab === "transactions" && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                >
-                  <h2 className="mb-6 text-2xl font-bold text-[#EBEBEB]">
-                    Transaction History
-                  </h2>
-
-                  {user?.transactions?.length === 0 ? (
-                    <div className="py-12 text-center">
-                      <History className="mx-auto mb-4 h-12 w-12 text-[#EBEBEB]/30" />
-                      <h3 className="mb-2 text-lg font-medium text-[#EBEBEB]">
-                        No transactions yet
-                      </h3>
-                      <p className="text-[#EBEBEB]/70">
-                        Your transaction history will appear here
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {user?.transactions?.map((transaction) => (
-                        <div
-                          key={transaction.id}
-                          className="flex items-center justify-between rounded-lg border border-[#EBEBEB]/10 bg-[#121C2B]/30 p-4"
-                        >
-                          <div>
-                            <div className="flex items-center space-x-2">
-                              <Badge
-                                variant="outline"
-                                className={`border-[#EBEBEB]/20 ${getStatusColor(
-                                  transaction.status
-                                )}`}
-                              >
-                                {transaction.status.toUpperCase()}
-                              </Badge>
-                            </div>
-                            <div className="mt-1 flex items-center space-x-4 text-sm text-[#EBEBEB]/70">
-                              <span>{formatDate(transaction.timestamp)}</span>
-                              <span>
-                                Method:{" "}
-                                {transaction.paymentMethod.toUpperCase()}
-                              </span>
-                              <span>Tokens: {Number(transaction.amount)}</span>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="font-medium text-[#EBEBEB]">
-                              ${transaction.amount.toFixed(2)}
-                            </div>
-                            <div className="text-sm text-[#EBEBEB]/70">
-                              {formatPrice(Number(transaction.amount))}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </motion.div>
-              )}
-            </div> */}
           </div>
         </div>
       </div>
