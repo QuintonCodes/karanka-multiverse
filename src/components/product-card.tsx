@@ -1,27 +1,46 @@
 "use client";
 
-import { AlertTriangle, ShoppingCart } from "lucide-react";
+import { AlertTriangle, Check, ShoppingCart } from "lucide-react";
 import { motion } from "motion/react";
 import { toast } from "sonner";
 
 import { useCart } from "@/context/cart-provider";
-import { Product } from "@/lib/products";
+import { Product, ProductVariant } from "@/lib/products";
 import { formatPrice } from "@/lib/utils";
 import Image from "next/image";
+import { useState } from "react";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 
 export default function ProductCard({ product }: { product: Product }) {
   const { addItem, items } = useCart();
 
+  const [selectedVariant, setSelectedVariant] = useState<
+    ProductVariant | undefined
+  >(product.variants ? product.variants[0] : undefined);
+
+  const currentPrice = selectedVariant ? selectedVariant.price : product.price;
+  const currentZarPrice = selectedVariant
+    ? selectedVariant.zarPrice
+    : product.zarPrice;
+  const currentTokens = selectedVariant
+    ? selectedVariant.tokens
+    : product.tokens;
+  const currentDescription = selectedVariant
+    ? selectedVariant.description
+    : product.description;
+
   const isInCart = items.some((item) => item.id === product.id);
 
-  const handleAddToCart = () => {
+  function handleAddToCart() {
     if (!isInCart) {
-      addItem(product);
-      toast.success(`${product.name} added to cart`);
+      addItem(product, selectedVariant);
+      const itemName = selectedVariant
+        ? `${product.name} (${selectedVariant.name})`
+        : product.name;
+      toast.success(`${itemName} added to cart`);
     }
-  };
+  }
 
   return (
     <motion.div
@@ -41,7 +60,7 @@ export default function ProductCard({ product }: { product: Product }) {
       <div className="p-6">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-xl font-bold text-[#EBEBEB]">{product.name}</h3>
-          {product.isSubscription && (
+          {(selectedVariant?.isSubscription ?? product.isSubscription) && (
             <Badge
               variant="outline"
               className="border-[#EBEBEB]/20 bg-[#121C2B]/50 text-[#EBEBEB]/70"
@@ -60,19 +79,67 @@ export default function ProductCard({ product }: { product: Product }) {
           )}
         </div>
 
-        <p className="mb-4 text-sm text-[#EBEBEB]/70">{product.description}</p>
+        {product.variants && product.variants.length > 0 && (
+          <div className="mb-4">
+            <div className="mb-2 text-sm font-medium text-[#EBEBEB]/80">
+              Choose Option:
+            </div>
+            <div className="space-y-2">
+              {product.variants.map((variant) => (
+                <button
+                  key={variant.id}
+                  disabled={isInCart && selectedVariant?.id !== variant.id}
+                  onClick={() => setSelectedVariant(variant)}
+                  className={`w-full rounded-lg border p-3 text-left transition-all ${
+                    selectedVariant?.id === variant.id
+                      ? "border-[#EBEBEB]/40 bg-[#121C2B]/50"
+                      : "border-[#EBEBEB]/10 bg-[#11120E] hover:border-[#EBEBEB]/20"
+                  } ${isInCart && selectedVariant?.id !== variant.id ? "opacity-40 cursor-not-allowed" : ""}`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <span className="font-medium text-[#EBEBEB]">
+                          {variant.name}
+                        </span>
+                        {selectedVariant?.id === variant.id && (
+                          <Check className="h-4 w-4 text-green-400" />
+                        )}
+                      </div>
+                      <div className="text-sm text-[#EBEBEB]/70">
+                        {variant.description}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-bold text-[#EBEBEB]">
+                        {formatPrice(variant.price, "USD")}
+                      </div>
+                      <div className="text-xs text-[#EBEBEB]/70">
+                        {variant.tokens} tokens
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <p className="mb-4 text-sm text-[#EBEBEB]/70">
+          {selectedVariant ? currentDescription : product.description}
+        </p>
 
         <div className="mb-4 flex items-center space-x-2">
           <div className="text-lg font-bold text-[#EBEBEB]">
-            {formatPrice(product.price, "USD")}
+            {formatPrice(currentPrice, "USD")}
           </div>
           <div className="text-sm text-[#EBEBEB]/70">
-            or {product.tokens} KRKUNI Tokens
+            or {currentTokens} KRKUNI Tokens
           </div>
         </div>
 
         <div className="text-xs text-[#EBEBEB]/50 mb-4">
-          ZAR: {formatPrice(product.zarPrice)}
+          ZAR: {formatPrice(currentZarPrice)}
         </div>
 
         <Button

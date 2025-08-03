@@ -89,7 +89,7 @@ export default function CartPage() {
               <div className="my-4 border-t border-[#EBEBEB]/10 pt-4">
                 <div className="flex justify-between font-semibold text-[#1E2E48]">
                   <span>Total</span>
-                  <span>${getTotalPrice().toFixed(2)}</span>
+                  <span>{formatPrice(getTotalPrice())}</span>
                 </div>
                 <div className="mt-1 text-right text-sm text-[#EBEBEB]/70">
                   {formatPrice(
@@ -124,8 +124,13 @@ function CartItem({
   removeItem,
 }: {
   item: CartItem;
-  removeItem: (id: string) => void;
+  removeItem: (id: string, variantId?: string) => void;
 }) {
+  const displayPrice = item.selectedVariant?.price || item.price;
+  const displayTokens = item.selectedVariant?.tokens || item.tokens;
+  const displayName =
+    `${item.name} (${item.selectedVariant?.name})` || item.name;
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -134,28 +139,32 @@ function CartItem({
       className="flex items-center justify-between py-4"
     >
       <div className="flex items-center">
-        <div className="relative mr-4">
-          {/* TODO: Adjust this properly */}
+        <div className="relative mr-4 h-12 w-12 rounded-full overflow-hidden">
           <Image
             src={item.image}
             alt={item.name}
-            width={48}
-            height={48}
-            className="object-cover rounded-full"
+            fill
+            sizes="48px"
+            className="object-cover"
           />
         </div>
         <div>
-          <h3 className="font-medium text-[#EBEBEB]">{item.name}</h3>
+          <h3 className="font-medium text-[#EBEBEB]">{displayName}</h3>
           <div className="flex items-center space-x-2 text-sm text-[#EBEBEB]/70">
-            <span>${item.price}</span>
-            <span>or {item.tokens} Tokens</span>
+            <span>{formatPrice(displayPrice, "USD")}</span>
+            <span>or {displayTokens} Tokens</span>
           </div>
+          {item.selectedVariant && (
+            <div className="text-xs text-[#EBEBEB]/50 mt-1">
+              {item.selectedVariant.description}
+            </div>
+          )}
         </div>
       </div>
       <Button
         variant="ghost"
         size="icon"
-        onClick={() => removeItem(item.id)}
+        onClick={() => removeItem(item.id, item.selectedVariant?.id)}
         className="text-red-500 hover:text-red-600 hover:bg-transparent hover:scale-110"
       >
         <Trash2 className="h-5 w-5" />

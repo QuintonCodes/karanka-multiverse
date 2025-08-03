@@ -54,7 +54,7 @@ export default function AuthProvider({
           },
           logout: async () => {
             try {
-              axios.post("/api/auth/logout");
+              await axios.post("/api/auth/logout");
             } catch {
               set({ user: null, isAuthenticated: false, isLoading: false });
             }

@@ -13,41 +13,65 @@ export type Product = {
   zarPrice: number;
   tokens: number;
   image: string;
-  isSubscription?: boolean;
   unavailable?: boolean;
+  isSubscription?: boolean;
+  variants?: ProductVariant[];
+  selectedVariant?: ProductVariant;
+};
+
+export type ProductVariant = {
+  id: string;
+  name: string;
+  price: number; // in USD
+  zarPrice: number; // in ZAR
+  tokens: number;
+  description?: string;
+  isSubscription?: boolean;
 };
 
 export const products: Product[] = [
   (() => {
-    const price = 100;
+    const price = 15;
     const zarPrice = calculateZarPrice(price, usdToZarRate);
 
     return {
       id: "trading-signal-bot",
       name: "Trading Signal Bot",
       description:
-        "Get real-time trading signals directly to your dashboard. Make informed trading decisions with our advanced algorithm.",
+        "Get real-time trading signals directly to your dashboard. Choose from weekly, monthly, or lifetime access options.",
       price,
       zarPrice,
-      tokens: 25,
+      tokens: price / 4,
       image: "/products/trading-bot.webp",
-      isSubscription: false,
-    };
-  })(),
-  (() => {
-    const price = 25;
-    const zarPrice = calculateZarPrice(price, usdToZarRate);
-
-    return {
-      id: "trading-signal-subscription",
-      name: "Weekly Signal Subscription",
-      description:
-        "Subscribe to our weekly trading signals service. Perfect for active traders who need constant market insights.",
-      price,
-      zarPrice,
-      tokens: 6.25,
-      image: "/products/signals.webp",
-      isSubscription: true,
+      variants: [
+        {
+          id: "weekly",
+          name: "Weekly Access",
+          price,
+          zarPrice,
+          tokens: price / 4,
+          description: "7 days of trading signals",
+          isSubscription: true,
+        },
+        {
+          id: "monthly",
+          name: "Monthly Access",
+          price: 43,
+          zarPrice: calculateZarPrice(43, usdToZarRate),
+          tokens: 43 / 4,
+          description: "30 days of trading signals",
+          isSubscription: true,
+        },
+        {
+          id: "lifetime",
+          name: "Lifetime Access",
+          price: 285,
+          zarPrice: calculateZarPrice(285, usdToZarRate),
+          tokens: 285 / 4,
+          description: "Unlimited access to trading signals",
+          isSubscription: false,
+        },
+      ],
     };
   })(),
   (() => {
@@ -64,6 +88,7 @@ export const products: Product[] = [
       tokens: 12.5,
       image: "/products/drone.webp",
       unavailable: true,
+      isSubscription: false,
     };
   })(),
   (() => {
@@ -79,6 +104,7 @@ export const products: Product[] = [
       zarPrice,
       tokens: 20,
       image: "/products/trading-lessons.webp",
+      isSubscription: false,
     };
   })(),
 ];

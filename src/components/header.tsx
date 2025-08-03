@@ -1,9 +1,10 @@
 "use client";
 
-import { Menu, ShoppingCart, Wallet } from "lucide-react";
+import { LogOut, Menu, ShoppingCart, Wallet } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import { useAuth } from "@/context/auth-provider";
 import { useCart } from "@/context/cart-provider";
@@ -30,11 +31,14 @@ const privateRoutes = [
 ];
 
 export default function Header() {
+  const router = useRouter();
   const pathname = usePathname();
   const [isScrolled, setIsScrolled] = useState(false);
 
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { items } = useCart();
+
+  const krkBalance = user?.wallet?.balance.toFixed(2) ?? "0.00";
 
   useEffect(() => {
     const handleScroll = () => {
@@ -45,7 +49,12 @@ export default function Header() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const krkBalance = user?.wallet?.balance.toFixed(2) ?? "0.00";
+  async function handleLogout() {
+    await logout();
+
+    toast.success("Logged out successfully");
+    router.push("/");
+  }
 
   return (
     <header
@@ -95,7 +104,7 @@ export default function Header() {
             ))}
         </nav>
 
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2">
           <Button
             variant="ghost"
             size="icon"
@@ -125,7 +134,7 @@ export default function Header() {
           )}
 
           {!user && (
-            <div className="hidden md:flex space-x-3">
+            <div className="hidden md:flex space-x-2">
               <Button
                 asChild
                 size="sm"
@@ -145,25 +154,43 @@ export default function Header() {
           )}
 
           {user && (
-            <Link href="/account">
-              <div className="text-[#EBEBEB]/70 border border-[#EBEBEB]/20 rounded-lg flex items-center gap-3 p-1 px-3 hover:border-[#EBEBEB]/40 transition-colors">
-                <Avatar className="size-8">
-                  <AvatarImage
-                    src={user.avatarUrl || "/placeholder.svg"}
-                    alt="User Photo"
-                    className="object-cover"
-                  />
-                </Avatar>
-                <p className="text-sm font-bold">{user.firstName}</p>
-              </div>
-            </Link>
+            <div className="flex items-center space-x-2">
+              <Link href="/account">
+                <div className="text-[#EBEBEB]/70 border border-[#EBEBEB]/20 rounded-lg flex items-center gap-3 p-1 px-3 hover:border-[#EBEBEB]/40 transition-colors">
+                  <Avatar className="size-8">
+                    <AvatarImage
+                      src={user.avatarUrl || "/placeholder.svg"}
+                      alt="User Photo"
+                      className="object-cover"
+                    />
+                  </Avatar>
+                  <p className="text-sm font-bold hidden md:block">
+                    {user.firstName}
+                  </p>
+                </div>
+              </Link>
+
+              {/* Logout Button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleLogout}
+                className="text-[#EBEBEB]/70 hover:text-[#EBEBEB] hover:bg-transparent"
+              >
+                <LogOut className="h-5 w-5" />
+              </Button>
+            </div>
           )}
 
           {/* Mobile Menu (Sheet) */}
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden">
-                <Menu className="h-5 w-5 text-[#EBEBEB]" />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="md:hidden text-[#EBEBEB]/70 hover:text-[#EBEBEB] hover:bg-transparent"
+              >
+                <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
             <SheetContent className="bg-[#11120E]/95 backdrop-blur-md p-4 border-0">

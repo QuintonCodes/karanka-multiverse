@@ -1,16 +1,17 @@
-import { Product } from "@/lib/products";
+import { Product, ProductVariant } from "@/lib/products";
 import { createContext, useContext, useState } from "react";
 import { createStore, StoreApi, useStore } from "zustand";
 import { persist } from "zustand/middleware";
 
 export type CartItem = Product & {
   quantity: number;
+  selectedVariant?: ProductVariant;
 };
 
 type CartStore = {
   items: CartItem[];
-  addItem: (product: Product) => void;
-  removeItem: (id: string) => void;
+  addItem: (product: Product, variant?: ProductVariant) => void;
+  removeItem: (id: string, variantId?: string) => void;
   clearCart: () => void;
   getTotalPrice: () => number;
 };
@@ -27,7 +28,7 @@ export default function CartProvider({
       persist(
         (set, get) => ({
           items: [],
-          addItem: (product: Product) => {
+          addItem: (product, variant) => {
             const currentItems = get().items;
             const existingItem = currentItems.find(
               (item) => item.id === product.id
@@ -37,15 +38,39 @@ export default function CartProvider({
               return; // Only allow one quantity per item
             }
 
-            set({ items: [...currentItems, { ...product, quantity: 1 }] });
+            set({
+              items: [
+                ...currentItems,
+                {
+                  ...product,
+                  quantity: 1,
+                  selectedVariant: variant,
+                  price: variant ? variant.price : product.price,
+                  zarPrice: variant ? variant.zarPrice : product.zarPrice,
+                  tokens: variant ? variant.tokens : product.tokens,
+                },
+              ],
+            });
           },
-          removeItem: (id: string) => {
-            set({ items: get().items.filter((item) => item.id !== id) });
+          removeItem: (id, variantId) => {
+            set({
+              items: get().items.filter((item) => {
+                if (variantId) {
+                  return !(
+                    item.id === id && item.selectedVariant?.id === variantId
+                  );
+                }
+                return item.id !== id && !item.selectedVariant;
+              }),
+            });
           },
           clearCart: () => set({ items: [] }),
           getTotalPrice: () => {
             return get().items.reduce((total, item) => {
-              return total + item.price * item.quantity;
+              const price = item.selectedVariant
+                ? item.selectedVariant.price
+                : item.price;
+              return total + price * item.quantity;
             }, 0);
           },
         }),

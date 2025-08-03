@@ -32,7 +32,7 @@ export default function ProductsPage() {
             </motion.p>
           </div>
 
-          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
             {products.map((product, index) => (
               <motion.div
                 key={product.id}

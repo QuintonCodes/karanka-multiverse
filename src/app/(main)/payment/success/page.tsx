@@ -50,8 +50,6 @@ export default function PaymentSuccessPage() {
           const customStr1 = params.custom_str1;
           if (customStr1 === "token_purchase") {
             const tokens = Number.parseInt(params.custom_int1 || "0");
-            // TODO: Change this later
-
             if (tokens > 0) {
               updateUser({
                 wallet: {
