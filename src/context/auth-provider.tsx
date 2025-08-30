@@ -10,7 +10,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { createStore, StoreApi, useStore } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
-type UserType = Omit<User, "password"> & {
+export type UserType = Omit<User, "password"> & {
   payments: Payment[];
   transactions: Transaction[];
   wallet: Wallet | null;

@@ -377,7 +377,7 @@ export default function WalletPage() {
                           <Badge
                             key={network}
                             variant="outline"
-                            className="border-[#EBEBEB]/20"
+                            className="border-[#EBEBEB]/20 text-[#EBEBEB]"
                           >
                             {network}
                           </Badge>

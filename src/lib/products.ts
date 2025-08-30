@@ -32,7 +32,7 @@ export type ProductVariant = {
 export const products: Product[] = [
   (() => {
     const price = 15;
-    const zarPrice = calculateZarPrice(price, usdToZarRate);
+    const zarPrice = calculateZarPrice(price);
 
     return {
       id: "trading-signal-bot",
@@ -57,7 +57,7 @@ export const products: Product[] = [
           id: "monthly",
           name: "Monthly Access",
           price: 43,
-          zarPrice: calculateZarPrice(43, usdToZarRate),
+          zarPrice: calculateZarPrice(43),
           tokens: 43 / 4,
           description: "30 days of trading signals",
           isSubscription: true,
@@ -66,7 +66,7 @@ export const products: Product[] = [
           id: "lifetime",
           name: "Lifetime Access",
           price: 285,
-          zarPrice: calculateZarPrice(285, usdToZarRate),
+          zarPrice: calculateZarPrice(285),
           tokens: 285 / 4,
           description: "Unlimited access to trading signals",
           isSubscription: false,
@@ -76,7 +76,7 @@ export const products: Product[] = [
   })(),
   (() => {
     const price = 50;
-    const zarPrice = calculateZarPrice(price, usdToZarRate);
+    const zarPrice = calculateZarPrice(price);
 
     return {
       id: "drone-flight-lessons",
@@ -93,7 +93,7 @@ export const products: Product[] = [
   })(),
   (() => {
     const price = 80;
-    const zarPrice = calculateZarPrice(price, usdToZarRate);
+    const zarPrice = calculateZarPrice(price);
 
     return {
       id: "trading-lessons",

@@ -2,13 +2,13 @@
 
 import { AlertTriangle, Check, ShoppingCart } from "lucide-react";
 import { motion } from "motion/react";
+import Image from "next/image";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { useCart } from "@/context/cart-provider";
 import { Product, ProductVariant } from "@/lib/products";
 import { formatPrice } from "@/lib/utils";
-import Image from "next/image";
-import { useState } from "react";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 

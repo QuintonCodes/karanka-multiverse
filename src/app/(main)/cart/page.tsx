@@ -8,14 +8,14 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import MainSection from "@/components/ui/main-section";
 import { type CartItem, useCart } from "@/context/cart-provider";
-import { calculateZarPrice, formatPrice, usdToZarRate } from "@/lib/utils";
+import { calculateZarPrice, formatPrice } from "@/lib/utils";
 
 export default function CartPage() {
   const { items, removeItem, getTotalPrice, clearCart } = useCart();
 
   return (
-    <MainSection>
-      <section className="w-full mx-auto px-4 py-32">
+    <MainSection className="mx-auto px-4 py-32">
+      <div>
         <h1 className="mb-8 text-3xl font-bold text-[#EBEBEB]">Your Cart</h1>
 
         {items.length === 0 ? (
@@ -78,11 +78,7 @@ export default function CartPage() {
                 </div>
                 <div className="flex justify-between text-[#EBEBEB]/70">
                   <span>ZAR Equivalent</span>
-                  <span>
-                    {formatPrice(
-                      calculateZarPrice(getTotalPrice(), usdToZarRate)
-                    )}
-                  </span>
+                  <span>{formatPrice(calculateZarPrice(getTotalPrice()))}</span>
                 </div>
               </div>
 
@@ -92,9 +88,7 @@ export default function CartPage() {
                   <span>{formatPrice(getTotalPrice())}</span>
                 </div>
                 <div className="mt-1 text-right text-sm text-[#EBEBEB]/70">
-                  {formatPrice(
-                    calculateZarPrice(getTotalPrice(), usdToZarRate)
-                  )}
+                  {formatPrice(calculateZarPrice(getTotalPrice()))}
                 </div>
               </div>
 
@@ -114,7 +108,7 @@ export default function CartPage() {
             </div>
           </div>
         )}
-      </section>
+      </div>
     </MainSection>
   );
 }

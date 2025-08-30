@@ -8,13 +8,26 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { motion } from "motion/react";
+import { JSX } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-
 import MainSection from "@/components/ui/main-section";
+import { formatPrice, formatTime, getStatDisplay } from "@/lib/utils";
 
-const signals = [
+type Signal = {
+  id: string;
+  pair: string;
+  action: string;
+  price: number;
+  timestamp: Date;
+  confidence: number;
+  status: string;
+  profit: number;
+  change: number;
+};
+
+const signals: Signal[] = [
   {
     id: "1",
     pair: "BTC/USDT",
@@ -50,30 +63,44 @@ const signals = [
   },
 ];
 
-const stats = {
-  totalSignals: 127,
-  successRate: 78.5,
-  activeSignals: 2,
-  totalProfit: 2450.75,
+type Stat = {
+  id: string;
+  title: string;
+  number: number;
+  icon: JSX.Element;
 };
 
+const stats: Stat[] = [
+  {
+    id: "total_signals",
+    title: "Total Signals",
+    number: 127,
+    icon: <Activity className="h-8 w-8 text-[#EBEBEB]/50" />,
+  },
+  {
+    id: "success_rate",
+    title: "Success Rate",
+    number: 78.5,
+    icon: <TrendingUp className="h-8 w-8 text-green-400" />,
+  },
+  {
+    id: "active_signals",
+    title: "Active Signals",
+    number: 2,
+    icon: <Bell className="h-8 w-8 text-yellow-400" />,
+  },
+  {
+    id: "total_profit",
+    title: "Total Profit",
+    number: 2450.75,
+    icon: <DollarSign className="h-8 w-8 text-green-400" />,
+  },
+];
+
 export default function DashboardPage() {
-  function formatTime(date: Date) {
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const minutes = Math.floor(diff / 60000);
-
-    if (minutes < 1) return "Just now";
-    if (minutes < 60) return `${minutes}m ago`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h ago`;
-    const days = Math.floor(hours / 24);
-    return `${days}d ago`;
-  }
-
   return (
-    <MainSection>
-      <section className="w-full mx-auto px-4 py-32">
+    <MainSection className="mx-auto px-4 py-32">
+      <section>
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-[#EBEBEB]">
             Trading Dashboard
@@ -85,73 +112,17 @@ export default function DashboardPage() {
 
         {/* Stats Grid */}
         <div className="mb-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="rounded-xl border border-[#EBEBEB]/10 bg-[#11120E] p-6"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-[#EBEBEB]/70">Total Signals</p>
-                <p className="text-2xl font-bold text-[#EBEBEB]">
-                  {stats.totalSignals}
-                </p>
-              </div>
-              <Activity className="h-8 w-8 text-[#EBEBEB]/50" />
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="rounded-xl border border-[#EBEBEB]/10 bg-[#11120E] p-6"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-[#EBEBEB]/70">Success Rate</p>
-                <p className="text-2xl font-bold text-[#EBEBEB]">
-                  {stats.successRate}%
-                </p>
-              </div>
-              <TrendingUp className="h-8 w-8 text-green-400" />
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="rounded-xl border border-[#EBEBEB]/10 bg-[#11120E] p-6"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-[#EBEBEB]/70">Active Signals</p>
-                <p className="text-2xl font-bold text-[#EBEBEB]">
-                  {stats.activeSignals}
-                </p>
-              </div>
-              <Bell className="h-8 w-8 text-yellow-400" />
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="rounded-xl border border-[#EBEBEB]/10 bg-[#11120E] p-6"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-[#EBEBEB]/70">Total Profit</p>
-                <p className="text-2xl font-bold text-[#EBEBEB]">
-                  ${stats.totalProfit}
-                </p>
-              </div>
-              <DollarSign className="h-8 w-8 text-green-400" />
-            </div>
-          </motion.div>
+          {stats.map((stat, index) => (
+            <motion.div
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-xl border border-[#EBEBEB]/10 bg-[#11120E] p-6"
+              initial={{ opacity: 0, y: 20 }}
+              key={stat.id}
+              transition={{ delay: index * 0.1 }}
+            >
+              <StatCard stat={stat} />
+            </motion.div>
+          ))}
         </div>
 
         {/* Trading Signals */}
@@ -161,9 +132,9 @@ export default function DashboardPage() {
               Recent Trading Signals
             </h2>
             <Button
-              variant="outline"
+              className="border-[#EBEBEB]/20 text-[#EBEBEB] hover:border-[#EBEBEB]/40 bg-transparent"
               size="sm"
-              className="border-[#EBEBEB]/20 hover:border-[#EBEBEB]/40 bg-transparent"
+              variant="outline"
             >
               <Bell className="mr-2 h-4 w-4" />
               Enable Notifications
@@ -173,84 +144,13 @@ export default function DashboardPage() {
           <div className="space-y-4">
             {signals.map((signal, index) => (
               <motion.div
-                key={signal.id}
-                initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.1 }}
                 className="flex items-center justify-between rounded-lg border border-[#EBEBEB]/10 bg-[#121C2B]/30 p-4"
+                initial={{ opacity: 0, x: -20 }}
+                key={signal.id}
+                transition={{ delay: index * 0.1 }}
               >
-                <div className="flex items-center space-x-4">
-                  <div
-                    className={`flex h-10 w-10 items-center justify-center rounded-full ${
-                      signal.action === "BUY"
-                        ? "bg-green-500/20"
-                        : "bg-red-500/20"
-                    }`}
-                  >
-                    {signal.action === "BUY" ? (
-                      <TrendingUp className="h-5 w-5 text-green-400" />
-                    ) : (
-                      <TrendingDown className="h-5 w-5 text-red-400" />
-                    )}
-                  </div>
-
-                  <div>
-                    <div className="flex items-center space-x-2">
-                      <span className="font-medium text-[#EBEBEB]">
-                        {signal.pair}
-                      </span>
-                      <Badge
-                        variant="outline"
-                        className={`border-[#EBEBEB]/20 ${
-                          signal.action === "BUY"
-                            ? "text-green-400"
-                            : "text-red-400"
-                        }`}
-                      >
-                        {signal.action}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center space-x-4 text-sm text-[#EBEBEB]/70">
-                      <span>Price: ${signal.price.toLocaleString()}</span>
-                      <span>Confidence: {signal.confidence}%</span>
-                      <span>{formatTime(signal.timestamp)}</span>
-                      {signal.change && (
-                        <span
-                          className={
-                            signal.change > 0
-                              ? "text-green-400"
-                              : "text-red-400"
-                          }
-                        >
-                          {signal.change > 0 ? "+" : ""}
-                          {signal.change}%
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="text-right">
-                  <Badge
-                    variant="outline"
-                    className={`border-[#EBEBEB]/20 ${
-                      signal.status === "active"
-                        ? "text-yellow-400"
-                        : signal.status === "completed"
-                          ? "text-green-400"
-                          : "text-[#EBEBEB]/50"
-                    }`}
-                  >
-                    {signal.status.toUpperCase()}
-                  </Badge>
-                  {signal.profit && (
-                    <div
-                      className={`text-sm ${signal.profit > 0 ? "text-green-400" : "text-red-400"}`}
-                    >
-                      {signal.profit > 0 ? "+" : ""}${signal.profit.toFixed(2)}
-                    </div>
-                  )}
-                </div>
+                <SignalCard signal={signal} />
               </motion.div>
             ))}
           </div>
@@ -269,5 +169,91 @@ export default function DashboardPage() {
         </div>
       </section>
     </MainSection>
+  );
+}
+
+function SignalCard({ signal }: { signal: Signal }) {
+  return (
+    <div className="flex items-center justify-between w-full">
+      <div className="flex items-center space-x-4">
+        <div
+          className={`flex h-10 w-10 items-center justify-center rounded-full ${
+            signal.action === "BUY" ? "bg-green-500/20" : "bg-red-500/20"
+          }`}
+        >
+          {signal.action === "BUY" ? (
+            <TrendingUp className="h-5 w-5 text-green-400" />
+          ) : (
+            <TrendingDown className="h-5 w-5 text-red-400" />
+          )}
+        </div>
+
+        <div>
+          <div className="flex items-center space-x-2">
+            <span className="font-medium text-[#EBEBEB]">{signal.pair}</span>
+            <Badge
+              variant="outline"
+              className={`border-[#EBEBEB]/20 ${
+                signal.action === "BUY" ? "text-green-400" : "text-red-400"
+              }`}
+            >
+              {signal.action}
+            </Badge>
+          </div>
+          <div className="flex items-center space-x-4 text-sm text-[#EBEBEB]/70">
+            <span>Price: {formatPrice(signal.price, "USD")}</span>
+            <span>Confidence: {signal.confidence}%</span>
+            <span>{formatTime(signal.timestamp)}</span>
+            {signal.change && (
+              <span
+                className={
+                  signal.change > 0 ? "text-green-400" : "text-red-400"
+                }
+              >
+                {signal.change > 0 ? "+" : ""}
+                {signal.change}%
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="text-right">
+        <Badge
+          className={`border-[#EBEBEB]/20 ${
+            signal.status === "active"
+              ? "text-yellow-400"
+              : signal.status === "completed"
+                ? "text-green-400"
+                : "text-[#EBEBEB]/50"
+          }`}
+          variant="outline"
+        >
+          {signal.status.toUpperCase()}
+        </Badge>
+        {signal.profit && (
+          <div
+            className={`text-sm ${signal.profit > 0 ? "text-green-400" : "text-red-400"}`}
+          >
+            {signal.profit > 0 ? "+" : ""}
+            {formatPrice(signal.profit, "USD")}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ stat }: { stat: Stat }) {
+  return (
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm text-[#EBEBEB]/70">Total Signals</p>
+        <p className="text-2xl font-bold text-[#EBEBEB]">
+          {getStatDisplay(stat)}
+        </p>
+      </div>
+      {stat.icon}
+    </div>
   );
 }

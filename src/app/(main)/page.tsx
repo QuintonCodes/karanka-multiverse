@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { motion } from "motion/react";
 import Link from "next/link";
+import { JSX } from "react";
 
 import ProductCard from "@/components/product-card";
 import TradingSignals from "@/components/trading-signals";
@@ -21,11 +22,10 @@ import MainSection from "@/components/ui/main-section";
 import { useAuth } from "@/context/auth-provider";
 import { products } from "@/lib/products";
 
-type PerformanceMetric = {
-  label: string;
-  value: string;
-  change: number;
-  icon: React.ReactNode;
+type Feature = {
+  icon: JSX.Element;
+  title: string;
+  description: string;
 };
 
 const features = [
@@ -66,6 +66,13 @@ const features = [
       "Our bots never sleep, constantly scanning markets for the best opportunities.",
   },
 ];
+
+type PerformanceMetric = {
+  label: string;
+  value: string;
+  change: number;
+  icon: React.ReactNode;
+};
 
 const performanceMetrics: PerformanceMetric[] = [
   {
@@ -172,25 +179,7 @@ export default function HomePage() {
                         transition={{ duration: 0.5, delay: index * 0.1 }}
                         className="flex items-center justify-between rounded-lg bg-[#11120E]/50 p-3"
                       >
-                        <div className="flex items-center space-x-3">
-                          <div className="text-[#EBEBEB]/70">{metric.icon}</div>
-                          <span className="text-sm text-[#EBEBEB]/70">
-                            {metric.label}
-                          </span>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-semibold text-[#EBEBEB]">
-                            {metric.value}
-                          </div>
-                          {metric.change !== 0 && (
-                            <div
-                              className={`text-xs ${metric.change > 0 ? "text-green-400" : "text-red-400"}`}
-                            >
-                              {metric.change > 0 ? "+" : ""}
-                              {metric.change}%
-                            </div>
-                          )}
-                        </div>
+                        <PerformanceCard metric={metric} />
                       </motion.div>
                     ))}
                   </div>
@@ -278,18 +267,46 @@ export default function HomePage() {
                 viewport={{ once: true }}
                 className="rounded-xl border border-[#EBEBEB]/10 bg-gradient-to-br from-[#121C2B]/50 to-[#11120E] p-6 transition-all duration-300 hover:border-[#EBEBEB]/20"
               >
-                <div className="mb-4 rounded-full bg-[#121C2B]/50 p-3 inline-block">
-                  <div className="text-[#EBEBEB]/90">{feature.icon}</div>
-                </div>
-                <h3 className="mb-2 text-xl font-bold text-[#EBEBEB]">
-                  {feature.title}
-                </h3>
-                <p className="text-[#EBEBEB]/70">{feature.description}</p>
+                <FeatureCard feature={feature} />
               </motion.div>
             ))}
           </div>
         </div>
       </section>
     </MainSection>
+  );
+}
+
+function PerformanceCard({ metric }: { metric: PerformanceMetric }) {
+  return (
+    <>
+      <div className="flex items-center space-x-3">
+        <div className="text-[#EBEBEB]/70">{metric.icon}</div>
+        <span className="text-sm text-[#EBEBEB]/70">{metric.label}</span>
+      </div>
+      <div className="text-right">
+        <div className="font-semibold text-[#EBEBEB]">{metric.value}</div>
+        {metric.change !== 0 && (
+          <div
+            className={`text-xs ${metric.change > 0 ? "text-green-400" : "text-red-400"}`}
+          >
+            {metric.change > 0 ? "+" : ""}
+            {metric.change}%
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+function FeatureCard({ feature }: { feature: Feature }) {
+  return (
+    <div>
+      <div className="mb-4 rounded-full bg-[#121C2B]/50 p-3 inline-block">
+        <div className="text-[#EBEBEB]/90">{feature.icon}</div>
+      </div>
+      <h3 className="mb-2 text-xl font-bold text-[#EBEBEB]">{feature.title}</h3>
+      <p className="text-[#EBEBEB]/70">{feature.description}</p>
+    </div>
   );
 }

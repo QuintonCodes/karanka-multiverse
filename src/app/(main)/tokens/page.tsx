@@ -62,8 +62,9 @@ const tokenSteps: TokenStepProps[] = [
 ];
 
 export default function TokensPage() {
-  const { user } = useAuth();
   const router = useRouter();
+
+  const { user } = useAuth();
 
   function handlePurchase(tokenPackage: Package) {
     if (!user) {
@@ -72,12 +73,12 @@ export default function TokensPage() {
     }
 
     toast.success("Redirecting to checkout...");
-    router.push(`/checkout/tokens?package=${tokenPackage.id}`);
+    router.push(`/checkout?package=${tokenPackage.id}`);
   }
 
   return (
-    <MainSection className="py-32">
-      <section className="w-full mx-auto px-4 space-y-12">
+    <MainSection className="py-32 mx-auto px-4 ">
+      <section className="space-y-12">
         <div className="text-center">
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
@@ -113,19 +114,21 @@ export default function TokensPage() {
 
         <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
           {packages.map((pkg, index) => (
-            <TokenPackageCard
-              pkg={pkg}
-              handlePurchase={handlePurchase}
-              index={index}
-              key={index}
-            />
+            <motion.div
+              animate={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0, y: 20 }}
+              key={pkg.id}
+              transition={{ delay: index * 0.1 }}
+            >
+              <TokenPackageCard handlePurchase={handlePurchase} pkg={pkg} />
+            </motion.div>
           ))}
         </div>
 
         {/* How Tokens Work Section */}
         <motion.div
-          initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, y: 40 }}
           transition={{ delay: 0.4 }}
         >
           <Card className="border-[#EBEBEB]/10 bg-gradient-to-br from-[#121C2B]/50 to-[#11120E]/80">
@@ -139,8 +142,8 @@ export default function TokensPage() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
-                {tokenSteps.map((item, index) => (
-                  <TokenStep item={item} key={index} />
+                {tokenSteps.map((item) => (
+                  <TokenStep item={item} key={item.step} />
                 ))}
               </div>
             </CardContent>
@@ -152,7 +155,6 @@ export default function TokensPage() {
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
-          // className="mt-16"
         >
           <Card className="border-[#EBEBEB]/10 bg-gradient-to-r from-green-500/10 to-blue-500/10">
             <CardContent className="p-8 text-center">
@@ -188,100 +190,94 @@ export default function TokensPage() {
   );
 }
 
-type TokenPackageProps = {
+function TokenPackageCard({
+  pkg,
+  handlePurchase,
+}: {
   pkg: Package;
   handlePurchase: (pkg: Package) => void;
-  index: number;
-};
-
-function TokenPackageCard({ pkg, handlePurchase, index }: TokenPackageProps) {
+}) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.1 }}
+    <Card
+      className={`relative h-full border transition-all duration-300 hover:border-[#EBEBEB]/40 hover:shadow-lg ${
+        pkg.popular
+          ? "border-[#EBEBEB]/30 bg-gradient-to-b from-[#121C2B]/80 to-[#11120E] ring-2 ring-[#EBEBEB]/20"
+          : "border-[#EBEBEB]/10 bg-[#11120E]"
+      }`}
     >
-      <Card
-        className={`relative h-full border transition-all duration-300 hover:border-[#EBEBEB]/40 hover:shadow-lg ${
-          pkg.popular
-            ? "border-[#EBEBEB]/30 bg-gradient-to-b from-[#121C2B]/80 to-[#11120E] ring-2 ring-[#EBEBEB]/20"
-            : "border-[#EBEBEB]/10 bg-[#11120E]"
-        }`}
-      >
-        {pkg.popular && (
-          <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-            <Badge className="bg-gradient-to-r from-[#EBEBEB] to-[#EBEBEB]/80 text-[#11120E] font-semibold px-4 py-1">
-              <Star className="mr-1 h-3 w-3" />
-              Most Popular
-            </Badge>
-          </div>
-        )}
+      {pkg.popular && (
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+          <Badge className="bg-gradient-to-r from-[#EBEBEB] to-[#EBEBEB]/80 text-[#11120E] font-semibold px-4 py-1">
+            <Star className="mr-1 h-3 w-3" />
+            Most Popular
+          </Badge>
+        </div>
+      )}
 
-        <CardHeader className="text-center pb-4">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20">
-            <Zap className="h-8 w-8 text-blue-400" />
-          </div>
-          <CardTitle className="text-2xl text-[#EBEBEB]">{pkg.name}</CardTitle>
-          <CardDescription className="text-[#EBEBEB]/70">
-            {pkg.description}
-          </CardDescription>
-        </CardHeader>
+      <CardHeader className="text-center pb-4">
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20">
+          <Zap className="h-8 w-8 text-blue-400" />
+        </div>
+        <CardTitle className="text-2xl text-[#EBEBEB]">{pkg.name}</CardTitle>
+        <CardDescription className="text-[#EBEBEB]/70">
+          {pkg.description}
+        </CardDescription>
+      </CardHeader>
 
-        <CardContent className="space-y-6">
-          {/* Pricing */}
-          <div className="text-center">
-            <div className="mb-2">
-              <span className="text-4xl font-bold text-[#EBEBEB]">
-                {pkg.tokens}
-              </span>
-              <span className="ml-2 text-lg text-[#EBEBEB]/70">
-                KRKUNI tokens
-              </span>
+      <CardContent className="space-y-6">
+        {/* Pricing */}
+        <div className="text-center">
+          <div className="mb-2">
+            <span className="text-4xl font-bold text-[#EBEBEB]">
+              {pkg.tokens}
+            </span>
+            <span className="ml-2 text-lg text-[#EBEBEB]/70">
+              KRKUNI tokens
+            </span>
+          </div>
+          <div className="space-y-1">
+            <div className="text-2xl font-bold text-[#EBEBEB]">
+              {formatPrice(pkg.price, "USD")}
             </div>
-            <div className="space-y-1">
-              <div className="text-2xl font-bold text-[#EBEBEB]">
-                {formatPrice(pkg.price, "USD")}
-              </div>
-              <div className="text-sm text-[#EBEBEB]/70">
-                {formatPrice(pkg.zarPrice)}
-              </div>
-              <div className="text-xs text-[#EBEBEB]/50">
-                {formatPrice(pkg.price / pkg.tokens, "USD")} per token
-              </div>
+            <div className="text-sm text-[#EBEBEB]/70">
+              {formatPrice(pkg.zarPrice)}
+            </div>
+            <div className="text-xs text-[#EBEBEB]/50">
+              {formatPrice(pkg.price / pkg.tokens, "USD")} per token
             </div>
           </div>
+        </div>
 
-          <Separator className="bg-[#EBEBEB]/10" />
+        <Separator className="bg-[#EBEBEB]/10" />
 
-          {/* Features */}
-          <ul className="space-y-3">
-            {pkg.features.map((feature, featureIndex) => (
-              <li
-                key={featureIndex}
-                className="flex items-start text-sm text-[#EBEBEB]/80"
-              >
-                <Check className="mr-3 mt-0.5 h-4 w-4 flex-shrink-0 text-green-400" />
-                <span>{feature}</span>
-              </li>
-            ))}
-          </ul>
+        {/* Features */}
+        <ul className="space-y-3">
+          {pkg.features.map((feature, featureIndex) => (
+            <li
+              key={featureIndex}
+              className="flex items-start text-sm text-[#EBEBEB]/80"
+            >
+              <Check className="mr-3 mt-0.5 h-4 w-4 flex-shrink-0 text-green-400" />
+              <span>{feature}</span>
+            </li>
+          ))}
+        </ul>
 
-          {/* Purchase Button */}
-          <Button
-            onClick={() => handlePurchase(pkg)}
-            className={`w-full transition-all ${
-              pkg.popular
-                ? "bg-gradient-to-r from-[#EBEBEB] to-[#EBEBEB]/90 text-[#11120E] hover:from-[#EBEBEB]/90 hover:to-[#EBEBEB]/80"
-                : "border border-[#EBEBEB]/20 bg-gradient-to-r from-[#121C2B] to-[#11120E] hover:border-[#EBEBEB]/40"
-            }`}
-          >
-            <ShoppingCart className="mr-2 h-4 w-4" />
-            Purchase Package
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </CardContent>
-      </Card>
-    </motion.div>
+        {/* Purchase Button */}
+        <Button
+          onClick={() => handlePurchase(pkg)}
+          className={`w-full transition-all ${
+            pkg.popular
+              ? "bg-gradient-to-r from-[#EBEBEB] to-[#EBEBEB]/90 text-[#11120E] hover:from-[#EBEBEB]/90 hover:to-[#EBEBEB]/80"
+              : "border border-[#EBEBEB]/20 bg-gradient-to-r from-[#121C2B] to-[#11120E] hover:border-[#EBEBEB]/40"
+          }`}
+        >
+          <ShoppingCart className="mr-2 h-4 w-4" />
+          Purchase Package
+          <ArrowRight className="ml-2 h-4 w-4" />
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 

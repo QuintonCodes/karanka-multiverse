@@ -14,6 +14,8 @@ export const avatarSchema = z.object({
     }),
 });
 
+export type AvatarFormValues = z.infer<typeof avatarSchema>;
+
 export const accountSchema = z.object({
   firstName: z
     .string()
@@ -40,3 +42,5 @@ export const accountSchema = z.object({
     .min(4, "Postal code must be at least 4 characters")
     .transform((val) => val.trim()),
 });
+
+export type AccountFormValues = z.infer<typeof accountSchema>;
