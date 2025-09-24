@@ -8,9 +8,9 @@ import { buildPayFastData } from "@/lib/payfast";
 export default async function RedirectCheckoutPage({
   searchParams,
 }: {
-  searchParams: { txn?: string };
+  searchParams: Promise<{ txn?: string }>;
 }) {
-  const transactionId = searchParams.txn;
+  const { txn: transactionId } = await searchParams;
   if (!transactionId) return notFound();
 
   const payment = await db.payment.findUnique({
