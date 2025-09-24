@@ -24,7 +24,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import MainSection from "@/components/ui/main-section";
+import { MainSection } from "@/components/ui/main-section";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/context/auth-provider";
 import { type Package, packages } from "@/lib/products";

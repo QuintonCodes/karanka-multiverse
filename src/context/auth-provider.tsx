@@ -5,10 +5,13 @@ import {
   User,
   Wallet,
 } from "@prisma/client";
+import { useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
-import React, { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { createStore, StoreApi, useStore } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+
+import { useSessionQuery } from "@/hooks/use-session";
 
 export type UserType = Omit<User, "password"> & {
   payments: Payment[];
@@ -23,12 +26,10 @@ type AuthStore = {
   isLoading: boolean;
   setUser: (user?: UserType | null) => void;
   logout: () => Promise<void>;
-  updateUser: (user?: Partial<UserType>) => void;
-};
-
-type SessionResponse = {
-  user: UserType | null;
-  isAuthenticated: boolean;
+  updateUser: (
+    user?: Partial<UserType> | ((prev: UserType) => Partial<UserType>)
+  ) => void;
+  refreshSession: () => Promise<void>;
 };
 
 const AuthContext = createContext<StoreApi<AuthStore> | undefined>(undefined);
@@ -38,9 +39,11 @@ export default function AuthProvider({
 }: {
   children: React.ReactNode;
 }) {
+  const queryClient = useQueryClient();
+
   const [store] = useState(() =>
     createStore<AuthStore>()(
-      persist(
+      persist<AuthStore>(
         (set, get) => ({
           user: null,
           isAuthenticated: false,
@@ -55,17 +58,28 @@ export default function AuthProvider({
           logout: async () => {
             try {
               await axios.post("/api/auth/logout");
-            } catch {
+            } finally {
               set({ user: null, isAuthenticated: false, isLoading: false });
+
+              // Invalidate the session query so it re-fetches
+              get().refreshSession();
             }
-            set({ user: null, isAuthenticated: false, isLoading: false });
           },
           updateUser: (user) => {
             const currentUser = get().user;
             if (!currentUser) return;
-            set({
-              user: { ...currentUser, ...user } as UserType,
-            });
+
+            if (typeof user === "function") {
+              const updatedUser = user(currentUser);
+              set({ user: { ...currentUser, ...updatedUser } });
+            } else {
+              set({
+                user: { ...currentUser, ...user },
+              });
+            }
+          },
+          refreshSession: async () => {
+            await queryClient.invalidateQueries({ queryKey: ["session"] });
           },
         }),
         {
@@ -74,34 +88,25 @@ export default function AuthProvider({
           partialize: (state) => ({
             user: state.user,
             isAuthenticated: state.isAuthenticated,
+            isLoading: state.isLoading,
+            setUser: state.setUser,
+            logout: state.logout,
+            updateUser: state.updateUser,
+            refreshSession: state.refreshSession,
           }),
         }
       )
     )
   );
+  const { data, isLoading, isSuccess } = useSessionQuery();
 
   useEffect(() => {
-    let isMounted = true;
-    async function fetchSession() {
-      try {
-        const response = await axios.get<SessionResponse>("/api/auth/session");
-        const data = response.data;
-        if (isMounted) {
-          store.getState().setUser(data.user);
-        }
-      } catch {
-        if (isMounted) {
-          store.getState().setUser(null);
-        }
-      }
+    if (isSuccess) {
+      store.getState().setUser(data?.user ?? null);
+    } else if (!isLoading && !data) {
+      store.getState().setUser(null);
     }
-
-    fetchSession();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [store]);
+  }, [data, isLoading, isSuccess, store]);
 
   return <AuthContext.Provider value={store}>{children}</AuthContext.Provider>;
 }

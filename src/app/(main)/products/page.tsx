@@ -1,7 +1,7 @@
 "use client";
 
 import ProductCard from "@/components/product-card";
-import MainSection from "@/components/ui/main-section";
+import { MainSection } from "@/components/ui/main-section";
 import { products } from "@/lib/products";
 import { motion } from "motion/react";
 

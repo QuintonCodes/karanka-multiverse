@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 import { useAuth } from "@/context/auth-provider";
 import { useCart } from "@/context/cart-provider";
+import { useWalletConnection } from "@/hooks/use-wallet-connection";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarImage } from "./ui/avatar";
 import { Button } from "./ui/button";
@@ -37,8 +38,14 @@ export default function Header() {
 
   const { user, logout } = useAuth();
   const { items } = useCart();
+  const { krkuniBalance, krkuniBalanceLoading } = useWalletConnection();
 
-  const krkBalance = user?.wallet?.balance.toFixed(2) ?? "0.00";
+  const initialBalance = user?.wallet?.balance
+    ? Number(user.wallet.balance as unknown as number).toFixed(4)
+    : "0.0000";
+
+  const balance =
+    !krkuniBalanceLoading && krkuniBalance ? krkuniBalance : initialBalance;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -50,10 +57,14 @@ export default function Header() {
   }, []);
 
   async function handleLogout() {
-    await logout();
+    try {
+      await logout();
 
-    toast.success("Logged out successfully");
-    router.push("/");
+      toast.success("Logged out successfully");
+      router.push("/");
+    } catch {
+      toast.error("Failed to log out");
+    }
   }
 
   return (
@@ -126,7 +137,7 @@ export default function Header() {
               <div className="hidden md:flex items-center space-x-2 px-3 py-1 rounded-full bg-[#121C2B]/50 border border-[#EBEBEB]/20 hover:border-[#EBEBEB]/40 transition-colors">
                 <Wallet className="h-4 w-4 text-[#EBEBEB]/70" />
                 <span className="text-sm font-medium text-[#EBEBEB]">
-                  {krkBalance}
+                  {balance}
                 </span>
                 <span className="text-xs text-[#EBEBEB]/70">KRKUNI</span>
               </div>

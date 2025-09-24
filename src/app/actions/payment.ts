@@ -1,202 +1,245 @@
 "use server";
 
-import { payFastService } from "@/lib/payfast";
-import { z } from "zod";
+import crypto from "crypto";
 
-const paymentSchema = z.object({
-  firstName: z.string().min(2),
-  lastName: z.string().min(2),
-  email: z.string().email(),
-  amount: z.number().positive(),
-  itemName: z.string().min(1),
-  itemDescription: z.string().optional(),
-  paymentId: z.string().min(1),
-  customData: z.record(z.string()).optional(),
-});
+import { CartItem } from "@/context/cart-provider";
+import { db } from "@/lib/db";
+import { buildPayFastData } from "@/lib/payfast";
+import { Package } from "@/lib/products";
+import { checkoutSchema } from "@/lib/schemas/checkout";
 
-const tokenPurchaseSchema = z.object({
-  packageId: z.string().min(1, "Package ID is required"),
-  packageName: z.string().min(1, "Package name is required"),
-  tokens: z.number().positive("Token amount must be positive"),
-  price: z.number().positive("Price must be positive"),
-  zarPrice: z.number().positive("ZAR price must be positive"),
-  firstName: z.string().min(2, "First name must be at least 2 characters"),
-  lastName: z.string().min(2, "Last name must be at least 2 characters"),
-  email: z.string().email("Please enter a valid email address"),
-  address: z.string().min(5, "Address must be at least 5 characters"),
-  city: z.string().min(2, "City must be at least 2 characters"),
-  postalCode: z.string().min(4, "Postal code must be at least 4 characters"),
-  paymentMethod: z.enum(["payfast", "tokens"]),
-});
+type ProductType = "subscription" | "onceOff" | "tokenPackage" | "unavailable";
 
-export async function createPayFastPayment(
-  data: z.infer<typeof paymentSchema>
-) {
+function createTransactionId() {
+  return crypto.randomUUID();
+}
+
+function validatedCheckoutForm(formData: FormData) {
+  const data = {
+    firstName: String(formData.get("firstName") ?? ""),
+    lastName: String(formData.get("lastName") ?? ""),
+    email: String(formData.get("email") ?? ""),
+    address: String(formData.get("address") ?? ""),
+    city: String(formData.get("city") ?? ""),
+    postalCode: String(formData.get("postalCode") ?? ""),
+    paymentMethod: String(formData.get("paymentMethod") ?? "debitCard"),
+  };
+  return checkoutSchema.safeParse(data);
+}
+
+// Cart Checkout
+export async function checkoutCart(formData: FormData, cartItems: CartItem[]) {
+  const validatedData = validatedCheckoutForm(formData);
+
+  if (!validatedData.success) {
+    return {
+      success: false,
+      error: "Some of the form fields are invalid.",
+      details: validatedData.error.flatten().fieldErrors,
+    };
+  }
+
+  if (cartItems.length === 0) {
+    return { success: false, error: "Cart is empty" };
+  }
+
+  const firstType =
+    cartItems[0].selectedVariant?.isSubscription ?? cartItems[0].isSubscription;
+  const mixedTypes = cartItems.some(
+    (item) =>
+      (item.selectedVariant?.isSubscription ?? item.isSubscription) !==
+      firstType
+  );
+
+  if (mixedTypes) {
+    return {
+      success: false,
+      error:
+        "You cannot mix subscription and once-off items in a single checkout.",
+    };
+  }
+
+  const product = cartItems[0];
+
+  const isSubscription =
+    product.selectedVariant?.isSubscription ?? product.isSubscription;
+
   try {
-    const validatedData = paymentSchema.parse(data);
+    const { firstName, lastName, email } = validatedData.data;
+    const transactionId = createTransactionId();
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const user = await db.user.findUnique({ where: { email } });
+    if (!user) {
+      return { success: false, error: "User not found." };
+    }
 
-    const paymentData = {
-      merchant_id: process.env.PAYFAST_MERCHANT_ID || "",
-      merchant_key: process.env.PAYFAST_MERCHANT_KEY || "",
-      return_url: `${baseUrl}/payment/success`,
-      cancel_url: `${baseUrl}/payment/cancel`,
-      notify_url: `${baseUrl}/api/payfast/notify`,
-      name_first: validatedData.firstName,
-      name_last: validatedData.lastName,
-      email_address: validatedData.email,
-      m_payment_id: validatedData.paymentId,
-      amount: validatedData.amount.toFixed(2),
-      item_name: validatedData.itemName,
-      item_description: validatedData.itemDescription || "",
-      custom_str1: validatedData.customData?.type || "",
-      custom_str2: validatedData.customData?.userId || "",
-      custom_str3: validatedData.customData?.items || "",
+    const paymentData = buildPayFastData({
+      data: {
+        firstName,
+        lastName,
+        email,
+        amount: product.zarPrice.toFixed(2),
+        name: isSubscription ? product.name : "Cart Purchase",
+        description: isSubscription
+          ? product.description || ""
+          : `Purchase of ${cartItems.length} items`,
+      },
+      transactionId,
+    });
+
+    if (!paymentData) {
+      return { success: false, error: "Failed to build payment data" };
+    }
+
+    const basePaymentData = {
+      userId: user.id,
+      amount: product.selectedVariant
+        ? product.selectedVariant.zarPrice
+        : (product.zarPrice ?? 0),
+      transactionReference: transactionId,
+      paymentDate: new Date(),
+
+      productId: product.selectedVariant
+        ? `${product.id}-${product.selectedVariant.id}`
+        : product.id,
+      productName: product.selectedVariant
+        ? `${product.name} (${product.selectedVariant.name})`
+        : product.name,
+      productSlug: product.id,
+      productType: (product.selectedVariant
+        ? product.selectedVariant.isSubscription
+          ? "subscription"
+          : "onceOff"
+        : product.isSubscription
+          ? "subscription"
+          : "onceOff") as ProductType,
+      productTokens: product.selectedVariant
+        ? product.selectedVariant.tokens
+        : (product.tokens ?? 0),
+      productPrice: product.selectedVariant
+        ? product.selectedVariant.price
+        : (product.price ?? 0),
+
+      items: {
+        create: {
+          productId: product.selectedVariant
+            ? `${product.id}-${product.selectedVariant.id}`
+            : product.id,
+        },
+      },
     };
 
-    const paymentWithSignature =
-      payFastService.generatePaymentData(paymentData);
-    const paymentUrl = payFastService.getPaymentUrl();
+    const paymentRecord = await db.payment.create({
+      data: isSubscription
+        ? {
+            ...basePaymentData,
+            subscription: {
+              create: {
+                userId: user.id,
+                startsAt: new Date(),
+                endsAt: new Date(Date.now() + 31 * 24 * 60 * 60 * 1000),
+                autoRenew: false,
+                status: "active",
 
-    // Create form data for redirect
-    const formData = new FormData();
-    Object.entries(paymentWithSignature).forEach(([key, value]) => {
-      formData.append(key, value);
+                productId: basePaymentData.productId,
+                productName: basePaymentData.productName,
+                productSlug: basePaymentData.productSlug,
+                productType: basePaymentData.productType as ProductType,
+                productTokens: basePaymentData.productTokens,
+                productPrice: basePaymentData.productPrice,
+              },
+            },
+          }
+        : basePaymentData,
     });
 
     return {
       success: true,
-      paymentUrl,
-      paymentData: paymentWithSignature,
+      redirectUrl: `/checkout/redirect?txn=${transactionId}`,
+      transactionId,
+      paymentId: paymentRecord?.id,
     };
   } catch (error) {
-    console.error("PayFast payment creation error:", error);
+    console.error("Checkout Error:", error);
     return {
       success: false,
-      error: "Failed to create payment",
+      error: "Unexpected error during checking out cart.",
     };
   }
 }
 
-export async function handlePayFastReturn(
-  searchParams: Record<string, string>
+// Token Package checkout
+export async function checkoutTokenPackage(
+  formData: FormData,
+  tokenPackage: Package | null
 ) {
-  try {
-    const isValid = await payFastService.validatePayment(searchParams);
+  const validatedData = validatedCheckoutForm(formData);
 
-    if (isValid) {
-      // Payment successful - update database, send emails, etc.
-      const paymentId = searchParams.m_payment_id;
-      const amount = Number.parseFloat(searchParams.amount_gross || "0");
-
-      // Here you would typically:
-      // 1. Update payment status in database
-      // 2. Add tokens to user account
-      // 3. Send confirmation email
-      // 4. Log transaction
-
-      return {
-        success: true,
-        paymentId,
-        amount,
-        message: "Payment completed successfully",
-      };
-    } else {
-      return {
-        success: false,
-        error: "Payment validation failed",
-      };
-    }
-  } catch (error) {
-    console.error("PayFast return handling error:", error);
+  if (!validatedData.success) {
     return {
       success: false,
-      error: "Payment processing error",
+      error: "Some of the form fields are invalid.",
+      details: validatedData.error.flatten().fieldErrors,
     };
   }
-}
 
-export async function processTokenPurchase(formData: FormData) {
+  if (!tokenPackage) {
+    return { success: false, error: "Invalid token package" };
+  }
+
   try {
-    const data = {
-      packageId: formData.get("packageId") as string,
-      packageName: formData.get("packageName") as string,
-      tokens: Number(formData.get("tokens")),
-      price: Number(formData.get("price")),
-      zarPrice: Number(formData.get("zarPrice")),
-      firstName: formData.get("firstName") as string,
-      lastName: formData.get("lastName") as string,
-      email: formData.get("email") as string,
-      address: formData.get("address") as string,
-      city: formData.get("city") as string,
-      postalCode: formData.get("postalCode") as string,
-      paymentMethod: formData.get("paymentMethod") as "payfast" | "tokens",
-    };
+    const { firstName, lastName, email } = validatedData.data;
 
-    const validatedData = tokenPurchaseSchema.parse(data);
+    const transactionId = createTransactionId();
 
-    if (validatedData.paymentMethod === "tokens") {
-      // Process token payment
-      console.log("Processing token payment:", validatedData);
-
-      // In a real app, you would:
-      // 1. Verify user has sufficient tokens
-      // 2. Deduct tokens from user balance
-      // 3. Add purchased tokens to balance
-      // 4. Create transaction record
-
-      return {
-        success: true,
-        message: "Token purchase successful!",
-        redirect: "/dashboard",
-      };
-    } else {
-      // Process PayFast payment
-      const paymentData = payFastService.generatePaymentData({
-        merchant_id: process.env.PAYFAST_MERCHANT_ID!,
-        merchant_key: process.env.PAYFAST_MERCHANT_KEY!,
-        amount: validatedData.zarPrice.toFixed(2),
-        item_name: `${validatedData.packageName} - ${validatedData.tokens} Tokens`,
-        item_description: `Purchase of ${validatedData.tokens} tokens`,
-        name_first: validatedData.firstName,
-        name_last: validatedData.lastName,
-        email_address: validatedData.email,
-        m_payment_id: `trans-${1}`, // Change later
-        return_url: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/success`,
-        cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/cancel`,
-        notify_url: `${process.env.NEXT_PUBLIC_BASE_URL}/api/payfast/notify`,
-        custom_str1: validatedData.packageId,
-        custom_str2: validatedData.tokens.toString(),
-      });
-
-      return {
-        success: true,
-        paymentData,
-        paymentUrl:
-          process.env.NODE_ENV === "production"
-            ? "https://www.payfast.co.za/eng/process"
-            : "https://sandbox.payfast.co.za/eng/process",
-      };
+    const user = await db.user.findUnique({ where: { email } });
+    if (!user) {
+      return { success: false, error: "User not found." };
     }
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return {
-        success: false,
-        message: "Validation failed",
-        errors: error.errors.reduce(
-          (acc, err) => {
-            acc[err.path[0]] = err.message;
-            return acc;
-          },
-          {} as Record<string, string>
-        ),
-      };
+
+    const paymentData = buildPayFastData({
+      data: {
+        firstName,
+        lastName,
+        email,
+        amount: tokenPackage.zarPrice.toFixed(2),
+        name: `${tokenPackage.name} Token Package`,
+        description: `Purchase of ${tokenPackage.tokens} KRKUNI tokens`,
+      },
+      transactionId,
+    });
+
+    if (!paymentData) {
+      return { success: false, error: "Failed to build payment data" };
     }
+
+    const paymentRecord = await db.payment.create({
+      data: {
+        userId: user.id,
+        amount: tokenPackage.zarPrice,
+        transactionReference: transactionId,
+        paymentDate: new Date(),
+
+        productId: tokenPackage.id,
+        productName: tokenPackage.name,
+        productSlug: tokenPackage.id,
+        productType: "tokenPackage",
+        productTokens: tokenPackage.tokens ?? 0,
+        productPrice: tokenPackage.price,
+      },
+    });
 
     return {
+      success: true,
+      redirectUrl: `/checkout/redirect?txn=${transactionId}`,
+      transactionId,
+      paymentId: paymentRecord?.id,
+    };
+  } catch (error) {
+    console.error("Token Package Checkout Error:", error);
+    return {
       success: false,
-      message: "Payment processing failed. Please try again.",
+      error: "Unexpected error during token package checkout.",
     };
   }
 }

@@ -1,27 +1,50 @@
 "use server";
 
-import { ethers } from "ethers";
-
-import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { getChainName } from "@/lib/utils";
 
-export async function saveWalletToDB(address: string, rawBalance: string) {
-  const session = await getSession();
-  const userId = session?.userId;
-
-  if (!userId) throw new Error("User not authenticated");
-
-  let decimalBalance: string;
-
+export async function saveWalletToDB(
+  address: string,
+  krkuniBalance: bigint,
+  chain: number,
+  userId?: string
+) {
   try {
-    decimalBalance = ethers.formatUnits(rawBalance, 18);
-  } catch {
-    decimalBalance = rawBalance;
-  }
+    if (!address) {
+      return { success: false, error: "Wallet address is required" };
+    }
 
-  await db.wallet.upsert({
-    where: { userId },
-    update: { address, balance: decimalBalance },
-    create: { userId, address, balance: decimalBalance },
-  });
+    const existingWallet = await db.wallet.findUnique({
+      where: { address },
+    });
+
+    if (existingWallet) {
+      await db.wallet.update({
+        where: { address },
+        data: {
+          balance: krkuniBalance.toString(),
+          chain: getChainName(chain),
+          updatedAt: new Date(),
+          ...(userId ? { userId } : {}),
+        },
+      });
+    } else {
+      await db.wallet.create({
+        data: {
+          userId: userId!,
+          address,
+          balance: krkuniBalance.toString(),
+          chain: getChainName(chain),
+          isVerified: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      });
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("Save Wallet Error:", error);
+    return { success: false, error: "Failed to save wallet information" };
+  }
 }

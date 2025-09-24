@@ -6,12 +6,19 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
-import MainSection from "@/components/ui/main-section";
+import { MainSection } from "@/components/ui/main-section";
+import { useAuth } from "@/context/auth-provider";
 import { type CartItem, useCart } from "@/context/cart-provider";
 import { calculateZarPrice, formatPrice } from "@/lib/utils";
 
 export default function CartPage() {
   const { items, removeItem, getTotalPrice, clearCart } = useCart();
+  const { user } = useAuth();
+
+  const isWalletOnlyUser =
+    user?.email.endsWith("@wallet.local") && !user?.isVerified;
+
+  const canCheckout = !!user && !isWalletOnlyUser;
 
   return (
     <MainSection className="mx-auto px-4 py-32">
@@ -85,22 +92,45 @@ export default function CartPage() {
               <div className="my-4 border-t border-[#EBEBEB]/10 pt-4">
                 <div className="flex justify-between font-semibold text-[#1E2E48]">
                   <span>Total</span>
-                  <span>{formatPrice(getTotalPrice())}</span>
+                  <span>{formatPrice(getTotalPrice(), "USD")}</span>
                 </div>
                 <div className="mt-1 text-right text-sm text-[#EBEBEB]/70">
                   {formatPrice(calculateZarPrice(getTotalPrice()))}
                 </div>
               </div>
 
-              <Button
-                className="mt-4 w-full border border-[#EBEBEB]/20 bg-gradient-to-r from-[#121C2B] to-[#11120E] hover:border-[#EBEBEB]/40"
-                asChild
-              >
-                <Link href="/checkout">
+              {canCheckout ? (
+                <Button
+                  className="mt-4 w-full border border-[#EBEBEB]/20 bg-gradient-to-r from-[#121C2B] to-[#11120E] hover:border-[#EBEBEB]/40"
+                  asChild
+                >
+                  <Link href="/checkout">
+                    Proceed to Checkout
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              ) : (
+                <Button
+                  className="mt-4 w-full border border-[#EBEBEB]/20 bg-gradient-to-r from-[#121C2B] to-[#11120E]"
+                  disabled
+                >
                   Proceed to Checkout
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
+                </Button>
+              )}
+
+              {!user && (
+                <p className="mt-4 text-center text-xs text-[#EBEBEB]/50">
+                  Please log in to proceed to checkout
+                </p>
+              )}
+
+              {isWalletOnlyUser && (
+                <p className="mt-4 text-center text-xs text-[#EBEBEB]/50">
+                  Please login with your real account or merge your wallet with
+                  your account to checkout
+                </p>
+              )}
 
               <div className="mt-4 text-center text-xs text-[#EBEBEB]/50">
                 Payments are processed securely via PayFast
@@ -122,8 +152,9 @@ function CartItem({
 }) {
   const displayPrice = item.selectedVariant?.price || item.price;
   const displayTokens = item.selectedVariant?.tokens || item.tokens;
-  const displayName =
-    `${item.name} (${item.selectedVariant?.name})` || item.name;
+  const displayName = item.selectedVariant
+    ? `${item.name} (${item.selectedVariant?.name})`
+    : item.name;
 
   return (
     <motion.div

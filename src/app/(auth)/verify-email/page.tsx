@@ -1,53 +1,19 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertCircle, CheckCircle, Clock, Mail, RefreshCw } from "lucide-react";
+import { AlertCircle, Clock, Mail } from "lucide-react";
 import { motion } from "motion/react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useForm } from "react-hook-form";
-import { toast } from "sonner";
-import z from "zod";
+import { useSearchParams } from "next/navigation";
 
-import { resendVerificationCode, verifyEmail } from "@/app/actions/auth";
-import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSlot,
-} from "@/components/ui/input-otp";
-import MainSection from "@/components/ui/main-section";
-import { useAuth } from "@/context/auth-provider";
+import { MainSection } from "@/components/ui/main-section";
 import { useVerificationTimers } from "@/hooks/use-verification-timers";
-
-const verifySchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
-  code: z
-    .string()
-    .min(6, "Verification code must be 6 digits")
-    .max(6, "Verification code must be 6 digits"),
-});
-
-const resendSchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
-});
-
-type VerifyForm = z.infer<typeof verifySchema>;
-type ResendForm = z.infer<typeof resendSchema>;
+import { formatResendTime } from "@/lib/utils";
+import ResendEmailForm from "./resend-email-form";
+import VerifyEmailForm from "./verify-email-form";
 
 export default function VerifyEmailPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const emailFromUrl = searchParams.get("email") || "";
 
-  const { setUser } = useAuth();
   const {
     expiresAt,
     timeRemaining,
@@ -57,80 +23,6 @@ export default function VerifyEmailPage() {
   } = useVerificationTimers(null, 0);
 
   const isExpired = timeRemaining === 0 && expiresAt !== null;
-
-  const verifyForm = useForm<VerifyForm>({
-    resolver: zodResolver(verifySchema),
-    defaultValues: {
-      email: emailFromUrl,
-      code: "",
-    },
-  });
-
-  const resendForm = useForm<ResendForm>({
-    resolver: zodResolver(resendSchema),
-    defaultValues: {
-      email: emailFromUrl,
-    },
-  });
-
-  async function onSubmit(values: VerifyForm) {
-    const formData = new FormData();
-    formData.append("email", values.email);
-    formData.append("code", values.code);
-
-    try {
-      const result = await verifyEmail(formData);
-
-      if (result.error) {
-        toast.error("Verification failed", {
-          description: result.error || "Please try verifying again",
-        });
-        return;
-      }
-
-      setUser(result.user);
-
-      toast.success("Email verified successfully. You are now logged in.");
-      verifyForm.reset();
-      router.push("/");
-    } catch (error) {
-      toast.error("Something went wrong", {
-        description:
-          error instanceof Error ? error.message : "Please try again.",
-      });
-    }
-  }
-
-  async function handleResendCode() {
-    const email = verifyForm.getValues("email");
-    if (!email) {
-      toast.error("Please enter your email address");
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append("email", email);
-
-    const result = await resendVerificationCode(formData);
-
-    if (result.error) {
-      toast.error("Resend Failed", {
-        description: result.error,
-      });
-      return;
-    }
-
-    startExpiry(15 * 60 * 1000);
-    startResendCooldown(30 * 1000);
-
-    toast.success("Verification code has been sent!");
-  }
-
-  function formatTime(ms: number): string {
-    const minutes = Math.floor(ms / 60000);
-    const seconds = Math.floor((ms % 60000) / 1000);
-    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-  }
 
   return (
     <MainSection className="px-4 py-32 flex items-center justify-center">
@@ -158,7 +50,7 @@ export default function VerifyEmailPage() {
             {expiresAt && !isExpired && (
               <div className="flex items-center justify-center space-x-2 text-sm text-[#EBEBEB]/70">
                 <Clock className="h-4 w-4" />
-                <span>Code expires in {formatTime(timeRemaining)}</span>
+                <span>Code expires in {formatResendTime(timeRemaining)}</span>
               </div>
             )}
 
@@ -169,63 +61,10 @@ export default function VerifyEmailPage() {
               </div>
             )}
 
-            <Form {...verifyForm}>
-              <form
-                onSubmit={verifyForm.handleSubmit(onSubmit)}
-                className="space-y-4"
-              >
-                <FormField
-                  control={verifyForm.control}
-                  name="code"
-                  render={({ field }) => (
-                    <FormItem className="space-y-1">
-                      <FormLabel className="flex items-center justify-center">
-                        Verification Code
-                      </FormLabel>
-                      <FormControl>
-                        <div className="flex items-center justify-center">
-                          <InputOTP
-                            maxLength={6}
-                            {...field}
-                            disabled={
-                              verifyForm.formState.isSubmitting || isExpired
-                            }
-                          >
-                            <InputOTPGroup>
-                              <InputOTPSlot index={0} />
-                              <InputOTPSlot index={1} />
-                              <InputOTPSlot index={2} />
-                              <InputOTPSlot index={3} />
-                              <InputOTPSlot index={4} />
-                              <InputOTPSlot index={5} />
-                            </InputOTPGroup>
-                          </InputOTP>
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <Button
-                  type="submit"
-                  disabled={verifyForm.formState.isSubmitting || isExpired}
-                  className="w-full border border-[#EBEBEB]/20 bg-gradient-to-r from-[#121C2B] to-[#11120E] hover:border-[#EBEBEB]/40"
-                >
-                  {verifyForm.formState.isSubmitting ? (
-                    <>
-                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                      Verifying...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="mr-2 h-4 w-4" />
-                      Verify Email
-                    </>
-                  )}
-                </Button>
-              </form>
-            </Form>
+            <VerifyEmailForm
+              expiresAt={expiresAt}
+              timeRemaining={timeRemaining}
+            />
 
             {/* Resend Section */}
             <div className="space-y-4 border-t border-[#EBEBEB]/10 pt-6">
@@ -235,34 +74,13 @@ export default function VerifyEmailPage() {
 
               {resendCooldown > 0 ? (
                 <div className="text-center text-sm text-[#EBEBEB]/50">
-                  Resend available in {formatTime(resendCooldown)}
+                  Resend available in {formatResendTime(resendCooldown)}
                 </div>
               ) : (
-                <Form {...resendForm}>
-                  <form
-                    onSubmit={resendForm.handleSubmit(handleResendCode)}
-                    className="space-y-2"
-                  >
-                    <Button
-                      type="submit"
-                      variant="outline"
-                      disabled={resendForm.formState.isSubmitting}
-                      className="w-full text-[#EBEBEB] border-[#EBEBEB]/20 hover:border-[#EBEBEB]/40 bg-transparent"
-                    >
-                      {resendForm.formState.isSubmitting ? (
-                        <>
-                          <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                          Sending...
-                        </>
-                      ) : (
-                        <>
-                          <Mail className="mr-2 h-4 w-4" />
-                          Resend Verification Email
-                        </>
-                      )}
-                    </Button>
-                  </form>
-                </Form>
+                <ResendEmailForm
+                  startResendCooldown={startResendCooldown}
+                  startExpiry={startExpiry}
+                />
               )}
             </div>
 

@@ -8,11 +8,12 @@ import {
   Zap,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
+import { EmptyCard } from "@/components/empty-card";
 import CheckoutForm from "@/components/forms/checkout-form";
-import { Badge } from "@/components/ui/badge";
+import OrderSummary from "@/components/order-summary";
+import TokenSummary from "@/components/token-summary";
 import {
   Card,
   CardContent,
@@ -20,80 +21,76 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import MainSection from "@/components/ui/main-section";
+import { MainSection } from "@/components/ui/main-section";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/context/auth-provider";
-import { CartItem, useCart } from "@/context/cart-provider";
+import { useCart } from "@/context/cart-provider";
 import { packages } from "@/lib/products";
 import { calculateZarPrice, formatPrice } from "@/lib/utils";
 
 export default function CheckoutPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   const { user, isAuthenticated } = useAuth();
   const { items, getTotalPrice } = useCart();
 
   const packageId = searchParams.get("package");
-  const tokenPackage = useMemo(
-    () => packages.find((pkg) => pkg.id === packageId) || null,
-    [packageId]
-  );
-  const [checkoutType, setCheckoutType] = useState<"cart" | "tokens">(
-    tokenPackage ? "tokens" : "cart"
-  );
+  const tokenPackage = packages.find((pkg) => pkg.id === packageId) || null;
 
-  useEffect(() => {
-    if (items.length > 0) {
-      setCheckoutType("cart");
-    }
-  }, [items.length]);
+  const checkoutType: "cart" | "tokens" =
+    items.length > 0 ? "cart" : tokenPackage ? "tokens" : "cart";
 
-  useEffect(() => {
-    if (!tokenPackage && items.length === 0) {
-      router.replace("/cart");
-    }
-  }, [items.length, tokenPackage, router]);
+  if (!tokenPackage && items.length === 0) {
+    return (
+      <MainSection className="mx-auto px-4 py-32 flex items-center justify-center">
+        <EmptyCard
+          title="Your cart is empty"
+          description="Looks like you don't have anything to checkout yet."
+        />
+      </MainSection>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <MainSection className="mx-auto px-4 py-32 flex items-center justify-center">
+        <EmptyCard
+          title="Login required"
+          description="Please login or register to continue to checkout."
+          showAuthActions
+        />
+      </MainSection>
+    );
+  }
 
   // Totals
-  const totalTokens = useMemo(
-    () => items.reduce((sum, item) => sum + item.tokens, 0),
-    [items]
-  );
-  const totalPrice = useMemo(
-    () =>
-      checkoutType === "tokens"
-        ? formatPrice(tokenPackage?.price || 0, "USD")
-        : formatPrice(getTotalPrice(), "USD"),
-    [checkoutType, tokenPackage, getTotalPrice]
-  );
-  const totalZarPrice = useMemo(
-    () =>
-      checkoutType === "tokens"
-        ? formatPrice(tokenPackage?.zarPrice || 0)
-        : formatPrice(calculateZarPrice(getTotalPrice())),
-    [checkoutType, tokenPackage, getTotalPrice]
-  );
+  const totalTokens =
+    checkoutType === "tokens"
+      ? tokenPackage?.tokens || 0
+      : items.reduce((sum, item) => sum + item.tokens, 0);
 
-  // if (items.length === 0) {
-  //   router.push("/cart");
-  //   return null;
-  // }
+  const totalPrice =
+    checkoutType === "tokens" ? tokenPackage?.price || 0 : getTotalPrice();
 
-  if (!isAuthenticated || (!tokenPackage && items.length === 0)) {
-    return null;
-  }
+  const totalZarPrice =
+    checkoutType === "tokens"
+      ? tokenPackage?.zarPrice || 0
+      : calculateZarPrice(getTotalPrice());
+
+  // Back link
+  const backHref = checkoutType === "tokens" ? "/tokens" : "/cart";
+  const backText = checkoutType === "tokens" ? "Tokens" : "Cart";
 
   return (
     <MainSection className="mx-auto px-4 py-32">
       <section>
         <div className="mb-6">
           <Link
-            href={checkoutType === "tokens" ? "/tokens" : "/cart"}
+            href={backHref}
             className="mb-2 flex items-center text-sm text-[#EBEBEB]/70 hover:text-[#EBEBEB]"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to {checkoutType === "tokens" ? "Tokens" : "Cart"}
+            Back to {backText}
           </Link>
           <h1 className="text-3xl font-bold text-[#EBEBEB]">
             {checkoutType === "tokens" ? "Complete Token Purchase" : "Checkout"}
@@ -121,6 +118,7 @@ export default function CheckoutPage() {
                   user={user}
                   items={items}
                   checkoutType={checkoutType}
+                  tokenPackage={tokenPackage}
                 />
               </CardContent>
             </Card>
@@ -145,98 +143,36 @@ export default function CheckoutPage() {
               </CardHeader>
               <CardContent className="space-y-6">
                 {checkoutType === "tokens" && tokenPackage ? (
-                  <>
-                    <div className="rounded-lg border border-[#EBEBEB]/10 bg-[#121C2B]/30 p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <div>
-                          <div className="font-medium text-[#EBEBEB]">
-                            {tokenPackage.name}
-                          </div>
-                          <div className="text-sm text-[#EBEBEB]/70">
-                            {tokenPackage.description}
-                          </div>
-                        </div>
-                        {tokenPackage.popular && (
-                          <Badge
-                            variant="outline"
-                            className="border-[#EBEBEB]/20 bg-[#EBEBEB]/10 text-[#EBEBEB]"
-                          >
-                            Popular
-                          </Badge>
-                        )}
-                      </div>
-
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-[#EBEBEB]/70">Tokens</span>
-                          <span className="font-medium text-[#EBEBEB]">
-                            {tokenPackage.tokens}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-[#EBEBEB]/70">Price (USD)</span>
-                          <span className="font-medium text-[#EBEBEB]">
-                            {formatPrice(tokenPackage.price, "USD")}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-[#EBEBEB]/70">Price (ZAR)</span>
-                          <span className="font-medium text-[#EBEBEB]">
-                            {formatPrice(tokenPackage.zarPrice)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </>
+                  <TokenSummary tokenPackage={tokenPackage} />
                 ) : (
-                  <>
-                    <div className="space-y-4">
-                      {items.map((item) => (
-                        <OrderItem key={item.id} item={item} />
-                      ))}
-                    </div>
-
-                    <Separator className="bg-[#EBEBEB]/10" />
-
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-[#EBEBEB]/70">Subtotal</span>
-                        <span className="text-[#EBEBEB]">
-                          {formatPrice(getTotalPrice(), "USD")}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-[#EBEBEB]/70">
-                          ZAR Equivalent
-                        </span>
-                        <span className="text-[#EBEBEB]">
-                          {formatPrice(calculateZarPrice(getTotalPrice()))}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-[#EBEBEB]/70">Tokens</span>
-                        <span className="text-[#EBEBEB]">{totalTokens}</span>
-                      </div>
-                    </div>
-                  </>
+                  <OrderSummary
+                    items={items}
+                    totalPrice={totalPrice}
+                    totalZarPrice={totalZarPrice}
+                    totalTokens={totalTokens}
+                  />
                 )}
 
                 <Separator className="bg-[#EBEBEB]/10" />
 
+                {/* Totals */}
                 <div className="flex justify-between font-semibold text-lg">
                   <span className="text-[#EBEBEB]">Total</span>
                   <div className="text-right">
-                    <div className="text-[#EBEBEB]">{totalPrice}</div>
+                    <div className="text-[#EBEBEB]">
+                      {formatPrice(totalPrice, "USD")}
+                    </div>
                     <div className="text-sm text-[#EBEBEB]/70">
-                      {totalZarPrice}
+                      {formatPrice(totalZarPrice)}
                     </div>
                     {checkoutType === "tokens" && (
                       <div className="text-sm text-[#EBEBEB]/70">
-                        {tokenPackage?.tokens} tokens • $
-                        {(
+                        {tokenPackage?.tokens} tokens •{" "}
+                        {formatPrice(
                           (tokenPackage?.price || 0) /
-                          (tokenPackage?.tokens || 0)
-                        ).toFixed(3)}{" "}
+                            (tokenPackage?.tokens || 0),
+                          "USD"
+                        )}{" "}
                         per token
                       </div>
                     )}
@@ -274,22 +210,5 @@ export default function CheckoutPage() {
         </div>
       </section>
     </MainSection>
-  );
-}
-
-function OrderItem({ item }: { item: CartItem }) {
-  return (
-    <div className="flex justify-between">
-      <div>
-        <div className="font-medium text-[#EBEBEB]">{item.name}</div>
-        <div className="text-sm text-[#EBEBEB]/70">Qty: {item.quantity}</div>
-      </div>
-      <div className="text-right">
-        <div className="font-medium text-[#EBEBEB]">
-          {formatPrice(item.price, "USD")}
-        </div>
-        <div className="text-sm text-[#EBEBEB]/70">{item.tokens} Tokens</div>
-      </div>
-    </div>
   );
 }

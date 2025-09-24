@@ -1,9 +1,12 @@
 "use client";
 
-import { CheckoutFormValues, checkoutSchema } from "@/lib/schemas/checkout";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { CheckCircle, CreditCard, Loader2, Shield, Wallet } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 
+import { checkoutCart, checkoutTokenPackage } from "@/app/actions/payment";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -15,24 +18,27 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { useAuth, UserType } from "@/context/auth-provider";
-import { CartItem } from "@/context/cart-provider";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { CartItem, useCart } from "@/context/cart-provider";
+import { Package } from "@/lib/products";
+import { CheckoutFormValues, checkoutSchema } from "@/lib/schemas/checkout";
 import BillingDetailsFields from "../billing-details-fields";
-import { CardDetailsFields } from "../card-details-fields";
 
 type CheckoutFormProps = {
   user: UserType | null;
   items: CartItem[];
   checkoutType: "cart" | "tokens";
+  tokenPackage: Package | null;
 };
 
 export default function CheckoutForm({
   user,
   items,
   checkoutType,
+  tokenPackage,
 }: CheckoutFormProps) {
-  // const { control, formState, watch } = useFormContext<CheckoutFormValues>();
   const { updateUser } = useAuth();
+  const { clearCart } = useCart();
+  const router = useRouter();
 
   const totalTokens = items.reduce((sum, item) => sum + item.tokens, 0);
   const hasInsufficientTokens =
@@ -47,27 +53,79 @@ export default function CheckoutForm({
       address: user?.address || "",
       city: user?.city || "",
       postalCode: user?.postalCode || "",
-      paymentMethod: "payfast",
-
-      cardNumber: "",
-      expiryMonth: "",
-      expiryYear: "",
-      cvv: "",
-      cardholderName: "",
+      paymentMethod: "debitCard",
     },
   });
 
-  const { control, formState, watch } = checkoutForm;
-
-  const watchPaymentMethod = watch("paymentMethod");
+  const { control, formState } = checkoutForm;
 
   async function onSubmit(data: CheckoutFormValues) {
-    // Process payment and update user wallet
-    // This is where you would integrate with your payment gateway
+    const formData = new FormData();
+    Object.entries(data).forEach(([key, value]) => {
+      formData.append(key, value.toString());
+    });
 
-    console.log("Payment data submitted:", data);
-    updateUser(data);
-    // After successful payment, redirect or show success message
+    try {
+      let result;
+      if (checkoutType === "cart") {
+        result = await checkoutCart(formData, items);
+      } else if (checkoutType === "tokens") {
+        result = await checkoutTokenPackage(formData, tokenPackage);
+      }
+      if (result?.error) {
+        if (result.details) {
+          toast.error(
+            checkoutType === "cart"
+              ? "Cart Checkout Failed"
+              : "Token Purchase Failed",
+            {
+              description: "Validation failed.",
+            }
+          );
+        } else {
+          toast.error(
+            checkoutType === "cart"
+              ? "Cart Checkout Failed"
+              : "Token Purchase Failed",
+            {
+              description: result.error,
+            }
+          );
+        }
+        return;
+      }
+
+      // Success toast
+      toast.success(
+        checkoutType === "cart"
+          ? "Checkout successful!"
+          : "Token purchase successful!",
+        {
+          description:
+            checkoutType === "cart"
+              ? "Your order has been placed successfully."
+              : "Your token package has been purchased successfully.",
+        }
+      );
+
+      updateUser(data);
+
+      if (checkoutType === "cart") {
+        clearCart();
+      }
+
+      checkoutForm.reset();
+
+      // Redirect to PayFast or confirmation page
+      if (result?.redirectUrl) {
+        router.push(result.redirectUrl);
+      } else {
+        router.push("/");
+      }
+    } catch (error) {
+      console.error("Client error in checkout form:", error);
+      toast.error("Something went wrong. Please try again.");
+    }
   }
 
   return (
@@ -99,9 +157,9 @@ export default function CheckoutForm({
                         className="space-y-4 text-[#EBEBEB]"
                       >
                         <div className="flex items-center space-x-2 rounded-lg border border-[#EBEBEB]/20 p-4">
-                          <RadioGroupItem value="payfast" id="payfast" />
+                          <RadioGroupItem value="debitCard" id="debitCard" />
                           <label
-                            htmlFor="payfast"
+                            htmlFor="debitCard"
                             className="flex flex-1 items-center justify-between cursor-pointer"
                           >
                             <div className="flex items-center space-x-3">
@@ -133,12 +191,12 @@ export default function CheckoutForm({
                           }`}
                         >
                           <RadioGroupItem
-                            value="tokens"
-                            id="tokens"
+                            value="tokenPurchase"
+                            id="tokenPurchase"
                             disabled={hasInsufficientTokens}
                           />
                           <label
-                            htmlFor="tokens"
+                            htmlFor="tokenPurchase"
                             className="flex flex-1 items-center justify-between cursor-pointer"
                           >
                             <div className="flex items-center space-x-3">
@@ -168,18 +226,6 @@ export default function CheckoutForm({
                   </FormItem>
                 )}
               />
-            </div>
-          </>
-        )}
-
-        {(watchPaymentMethod === "payfast" || checkoutType === "tokens") && (
-          <>
-            <Separator className="bg-[#EBEBEB]/10" />
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium text-[#EBEBEB]">
-                Payment Details
-              </h3>
-              <CardDetailsFields />
             </div>
           </>
         )}

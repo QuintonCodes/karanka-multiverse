@@ -27,16 +27,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import MainSection from "@/components/ui/main-section";
+import { MainSection } from "@/components/ui/main-section";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/context/auth-provider";
-import { useMetaMaskStore } from "@/lib/stores/metamask-store";
+import { useWalletConnection } from "@/hooks/use-wallet-connection";
 import { formatPrice } from "@/lib/utils";
 
 export default function WalletPage() {
   const { user } = useAuth();
-  const { isConnected: isMetaMaskConnected } = useMetaMaskStore();
+  const { isConnected } = useWalletConnection();
 
   function getStatusIcon(status: string) {
     switch (status) {
@@ -101,7 +101,7 @@ export default function WalletPage() {
                   <div>
                     <div className="text-sm text-[#EBEBEB]/70">MetaMask</div>
                     <div className="font-semibold text-[#EBEBEB]">
-                      {isMetaMaskConnected ? "Connected" : "Not Connected"}
+                      {isConnected ? "Connected" : "Not Connected"}
                     </div>
                   </div>
                 </div>
@@ -137,7 +137,7 @@ export default function WalletPage() {
                       Portfolio Value
                     </div>
                     <div className="font-semibold text-[#EBEBEB]">
-                      {formatPrice(Number(user?.wallet?.value || 0))}
+                      {formatPrice(Number(user?.wallet?.valueZar || 0))}
                     </div>
                   </div>
                 </div>
@@ -191,21 +191,19 @@ export default function WalletPage() {
                           MetaMask Wallet
                         </div>
                         <div className="text-sm text-[#EBEBEB]/70">
-                          {isMetaMaskConnected
-                            ? "Connected & Active"
-                            : "Not Connected"}
+                          {isConnected ? "Connected & Active" : "Not Connected"}
                         </div>
                       </div>
                     </div>
                     <Badge
                       variant="outline"
                       className={`${
-                        isMetaMaskConnected
+                        isConnected
                           ? "border-green-400/20 bg-green-400/10 text-green-400"
                           : "border-red-400/20 bg-red-400/10 text-red-400"
                       }`}
                     >
-                      {isMetaMaskConnected ? "Connected" : "Disconnected"}
+                      {isConnected ? "Connected" : "Disconnected"}
                     </Badge>
                   </div>
 
@@ -300,7 +298,7 @@ export default function WalletPage() {
                     </h3>
                     <p className="text-3xl font-bold text-[#EBEBEB]">
                       {Number(user?.wallet?.balance || 0).toFixed(2)} (
-                      {formatPrice(Number(user?.wallet?.value || 0))})
+                      {formatPrice(Number(user?.wallet?.valueZar || 0))})
                     </p>
                     <p className="text-sm text-[#EBEBEB]/70">
                       Available tokens
@@ -398,7 +396,7 @@ export default function WalletPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {!user?.transactions ? (
+                {user?.transactions.length === 0 ? (
                   <div className="py-12 text-center">
                     <Clock className="mx-auto mb-4 h-12 w-12 text-[#EBEBEB]/30" />
                     <h3 className="mb-2 text-lg font-medium text-[#EBEBEB]">

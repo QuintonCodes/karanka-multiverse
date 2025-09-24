@@ -1,33 +1,92 @@
 "use client";
 
-import { Eye, EyeOff, History, Settings, Wallet, Zap } from "lucide-react";
+import { History, Settings, Wallet, Zap } from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
+import { toast } from "sonner";
+import { signMessage } from "wagmi/actions";
 
+import { getWalletNonce, linkWalletToUser } from "@/app/actions/metamask";
 import { EmptyCard } from "@/components/empty-card";
 import AvatarForm from "@/components/forms/avatar-form";
 import ProfileForm from "@/components/forms/profile-form";
 import { MetaMaskConnect } from "@/components/metamask-connect";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import MainSection from "@/components/ui/main-section";
+import { Card, CardContent } from "@/components/ui/card";
+import { MainSection } from "@/components/ui/main-section";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/context/auth-provider";
+import { useWalletConnection } from "@/hooks/use-wallet-connection";
 import { formatDate, formatPrice, getStatusColor } from "@/lib/utils";
+import { config } from "@/lib/wagmi";
 
 export default function AccountPage() {
-  const { user, updateUser, isAuthenticated } = useAuth();
+  const { user, updateUser, refreshSession, isAuthenticated } = useAuth();
 
   const [activeTab, setActiveTab] = useState("profile");
-  const [showWalletAddress, setShowWalletAddress] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const { isConnected, address } = useWalletConnection();
+
+  const isWalletOnlyUser =
+    user?.email.endsWith("@wallet.local") && !user?.isVerified;
+  const canLinkWallet =
+    isWalletOnlyUser || (!user?.wallet && !isWalletOnlyUser);
+
+  async function handleLinkWallet() {
+    if (!user) {
+      toast.error("You need to be logged in to link a wallet.");
+      return;
+    }
+
+    if (!isConnected || !address) {
+      toast.error("Please connect your MetaMask wallet first.");
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+
+      const nonceResponse = await getWalletNonce(address);
+      if (!nonceResponse.success || !nonceResponse.nonce) {
+        toast.error(nonceResponse.error || "Failed to get nonce.");
+        return;
+      }
+
+      let signature: string;
+      try {
+        signature = await signMessage(config, { message: nonceResponse.nonce });
+      } catch (error) {
+        console.error("Signature error:", error);
+        toast.error("Message signing was cancelled.");
+        return;
+      }
+
+      const result = await linkWalletToUser(address, signature, user.id);
+
+      if (!result.success) {
+        toast.error(result.error || "Failed to link wallet.");
+        return;
+      }
+
+      if (result.merged) {
+        await refreshSession();
+        toast.success("Wallet merged and account session refreshed!");
+        return;
+      }
+
+      if (result.wallet) {
+        updateUser({ wallet: result.wallet });
+        toast.success("Wallet linked successfully!");
+      }
+    } catch (error) {
+      console.error("Link wallet error:", error);
+      toast.error("Failed to link wallet. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   if (!isAuthenticated) {
     return (
@@ -171,47 +230,29 @@ export default function AccountPage() {
                         <h3 className="mb-4 text-lg font-semibold text-[#EBEBEB]">
                           MetaMask Wallet
                         </h3>
-                        <MetaMaskConnect showBalance />
-                      </div>
 
-                      {/* Manual Wallet Address */}
-                      <Card className="border-[#EBEBEB]/10 bg-[#121C2B]/30">
-                        <CardHeader>
-                          <CardTitle className="text-[#EBEBEB]">
-                            Manual Wallet Address
-                          </CardTitle>
-                          <CardDescription className="text-[#EBEBEB]/70">
-                            Your cryptocurrency wallet address for token
-                            transactions
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="relative">
-                            <Input
-                              type={showWalletAddress ? "text" : "password"}
-                              readOnly
-                              value={user?.wallet?.address || ""}
-                              placeholder="0x1234...abcd"
-                              className="border-[#EBEBEB]/20 bg-[#11120E] text-[#EBEBEB] focus-visible:border-[#EBEBEB]/40 focus-visible:ring-[#EBEBEB]/20 pr-10"
-                            />
+                        {canLinkWallet ? (
+                          <div className="space-y-3">
+                            <MetaMaskConnect showBalance />
                             <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                              onClick={() =>
-                                setShowWalletAddress(!showWalletAddress)
-                              }
+                              className="bg-gradient-to-r from-[#121C2B] to-[#11120E] border border-[#EBEBEB]/20 hover:border-[#EBEBEB]/40"
+                              onClick={handleLinkWallet}
+                              disabled={!isConnected || isLoading}
                             >
-                              {showWalletAddress ? (
-                                <EyeOff className="h-4 w-4 text-[#EBEBEB]/70" />
-                              ) : (
-                                <Eye className="h-4 w-4 text-[#EBEBEB]/70" />
-                              )}
+                              {isLoading
+                                ? "Linking Wallet..."
+                                : "Link Wallet to Account"}
                             </Button>
                           </div>
-                        </CardContent>
-                      </Card>
+                        ) : (
+                          <div className="space-y-3">
+                            <MetaMaskConnect showBalance />
+                            <p className="text-sm text-[#EBEBEB]/70">
+                              Your wallet is already linked to this account.
+                            </p>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </motion.div>
                 </TabsContent>
@@ -266,23 +307,23 @@ export default function AccountPage() {
                                     </span>
                                     <span>
                                       Method:{" "}
-                                      {transaction.paymentMethod.toUpperCase()}
+                                      {transaction.paymentMethod?.toUpperCase()}
                                     </span>
-                                    {/* {transaction.tokens && <span>Tokens: {transaction.tokens}</span>} */}
                                   </div>
                                 </div>
                                 <div className="text-right">
                                   <div className="font-medium text-[#EBEBEB]">
+                                    {/* USD Price */}
                                     {formatPrice(
                                       Number(transaction.amount || 0),
                                       "USD"
                                     )}
                                   </div>
                                   <div className="text-sm text-[#EBEBEB]/70">
+                                    {/* ZAR Price */}
                                     {formatPrice(
                                       Number(transaction.amount || 0)
                                     )}
-                                    {/* Price amount */}
                                   </div>
                                 </div>
                               </div>

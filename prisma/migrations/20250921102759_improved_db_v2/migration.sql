@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "public"."Wallet" ADD COLUMN     "nonce" TEXT,
+ALTER COLUMN "chain" DROP NOT NULL,
+ALTER COLUMN "valueZar" DROP NOT NULL,
+ALTER COLUMN "valueZar" DROP DEFAULT;

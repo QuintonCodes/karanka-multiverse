@@ -13,14 +13,8 @@ export type PaymentData = {
   lastName: string;
   email: string;
   amount: string;
-  address: string;
-  city: string;
-  postalCode: string;
-  cardholderName: string;
-  cardNumber: string;
-  expiryMonth: string;
-  expiryYear: string;
-  cvv: string;
+  name: string;
+  description: string;
 };
 
 export type PayFastResponse = {
@@ -30,16 +24,23 @@ export type PayFastResponse = {
   transactionId?: string;
 };
 
+// Reviewed
 export type PayFastPaymentData = {
-  merchant_id: string;
+  // Merchant details
+  merchant_id: number;
   merchant_key: string;
   return_url: string;
   cancel_url: string;
   notify_url: string;
-  name_first: string;
-  name_last: string;
-  email_address: string;
-  m_payment_id: string;
+
+  // Customer details
+  name_first?: string;
+  name_last?: string;
+  email_address?: string;
+  cell_number?: string;
+
+  // Transaction details
+  m_payment_id?: string;
   amount: string;
   item_name: string;
   item_description?: string;
@@ -49,210 +50,172 @@ export type PayFastPaymentData = {
   custom_int1?: string;
   custom_int2?: string;
   custom_int3?: string;
+
+  email_confirmation?: string;
+  confirmation_address?: string;
+  payment_method?: "dc" | "eft" | "cc";
+
+  // Subscription fields
+  subscription_type?: 1 | 2;
+  billing_date?: string; // YYYY-MM-DD
+  recurring_amount?: string;
+  frequency?: 1 | 2 | 3 | 4 | 6 | 7;
+  cycles?: number;
+  subscription_notify_email?: string;
+  subscription_notify_webhook?: string;
+  subscription_notify_buyer?: string;
+
+  // Tokenization / update card (for future use)
+  token?: string;
+  return_token?: string;
 };
 
-export class PayFastService {
-  private config: PayFastConfig;
+const config: PayFastConfig = {
+  merchantId:
+    process.env.NODE_ENV !== "production"
+      ? process.env.PAYFAST_SANDBOX_MERCHANT_ID!
+      : process.env.PAYFAST_MERCHANT_ID!,
+  merchantKey:
+    process.env.NODE_ENV !== "production"
+      ? process.env.PAYFAST_SANDBOX_MERCHANT_KEY!
+      : process.env.PAYFAST_MERCHANT_KEY!,
+  passphrase: process.env.PAYFAST_PASSPHRASE!,
+  sandbox: process.env.NODE_ENV !== "production",
+};
 
-  constructor(config: PayFastConfig) {
-    this.config = config;
-  }
-
-  private generateSignature(data: Record<string, string>): string {
-    // Create parameter string
-    const paramString = Object.keys(data)
-      .filter((key) => key !== "signature")
-      .sort()
-      .map(
-        (key) => `${key}=${encodeURIComponent(data[key]).replace(/%20/g, "+")}`
-      )
-      .join("&");
-
-    // Add passphrase if provided
-    const stringToHash = this.config.passphrase
-      ? `${paramString}&passphrase=${encodeURIComponent(
-          this.config.passphrase
-        )}`
-      : paramString;
-
-    // Generate MD5 hash
-    return crypto.createHash("md5").update(stringToHash).digest("hex");
-  }
-
-  private isValidCardNumber(cardNumber: string): boolean {
-    // Luhn algorithm implementation
-    let sum = 0;
-    let isEven = false;
-
-    for (let i = cardNumber.length - 1; i >= 0; i--) {
-      let digit = Number.parseInt(cardNumber.charAt(i), 10);
-
-      if (isEven) {
-        digit *= 2;
-        if (digit > 9) {
-          digit -= 9;
-        }
-      }
-
-      sum += digit;
-      isEven = !isEven;
-    }
-
-    return sum % 10 === 0 && cardNumber.length >= 13 && cardNumber.length <= 19;
-  }
-
-  generatePaymentData(
-    paymentData: PayFastPaymentData
-  ): PayFastPaymentData & { signature: string } {
-    const dataWithSignature = {
-      ...paymentData,
-      signature: this.generateSignature(paymentData),
-    };
-
-    return dataWithSignature;
-  }
-
-  validateSignature(data: Record<string, string>): boolean {
-    const receivedSignature = data.signature;
-    const calculatedSignature = this.generateSignature(data);
-    return receivedSignature === calculatedSignature;
-  }
-
-  getPaymentUrl(): string {
-    return this.config.sandbox
-      ? "https://sandbox.payfast.co.za/eng/process"
-      : "https://www.payfast.co.za/eng/process";
-  }
-
-  async validatePayment(data: Record<string, string>): Promise<boolean> {
-    try {
-      // Validate signature
-      if (!this.validateSignature(data)) {
-        console.error("PayFast signature validation failed");
-        return false;
-      }
-
-      // Validate payment status
-      const validUrl = this.config.sandbox
-        ? "https://sandbox.payfast.co.za/eng/query/validate"
-        : "https://www.payfast.co.za/eng/query/validate";
-
-      const response = await axios.post(
-        validUrl,
-        new URLSearchParams(data).toString()
-      );
-
-      // const response = await fetch(validUrl, {
-      //   method: "POST",
-      //   headers: {
-      //     "Content-Type": "application/x-www-form-urlencoded",
-      //   },
-      //   body: new URLSearchParams(data).toString(),
-      // });
-
-      const result = await response.data;
-      return result;
-    } catch (error) {
-      console.error("PayFast validation error:", error);
-      return false;
-    }
-  }
-
-  async validateCardDetails(
-    data: PaymentData
-  ): Promise<{ success: boolean; error?: string }> {
-    try {
-      const cardNumber = data.cardNumber.replace(/\s/g, "");
-      if (!this.isValidCardNumber(cardNumber)) {
-        return { success: false, error: "Invalid card number format" };
-      }
-
-      // Check expiry date
-      const currentDate = new Date();
-      const currentYear = currentDate.getFullYear();
-      const currentMonth = currentDate.getMonth() + 1;
-
-      const expiryYear = Number.parseInt(data.expiryYear);
-      const expiryMonth = Number.parseInt(data.expiryMonth);
-
-      if (
-        expiryYear < currentYear ||
-        (expiryYear === currentYear && expiryMonth < currentMonth)
-      ) {
-        return { success: false, error: "Card has expired" };
-      }
-
-      // CVV validation
-      if (data.cvv.length < 3 || data.cvv.length > 4) {
-        return { success: false, error: "Invalid CVV" };
-      }
-
-      return { success: true };
-    } catch (error) {
-      console.error("Card validation error", error);
-      return { success: false, error: "Card validation failed" };
-    }
-  }
-
-  async createPayFastPayment(
-    data: PaymentData,
-    transactionId: string
-  ): Promise<PayFastResponse> {
-    try {
-      const baseUrl =
-        process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-
-      const paymentData = this.generatePaymentData({
-        merchant_id: this.config.merchantId,
-        merchant_key: this.config.merchantKey,
-        return_url: `${baseUrl}/payment/success?transaction_id=${transactionId}`,
-        cancel_url: `${baseUrl}/payment/cancel?transaction_id=${transactionId}`,
-        notify_url: `${baseUrl}/api/payfast/notify`,
-        name_first: data.firstName,
-        name_last: data.lastName,
-        email_address: data.email,
-        m_payment_id: transactionId,
-        amount: Number.parseFloat(data.amount).toFixed(2),
-        item_name: "", // TODO: Change this later
-        item_description: `Payment for ${data.firstName} ${data.lastName}`,
-        custom_str1: transactionId,
-        custom_str2: data.email,
-        custom_str3: new Date().toISOString(),
-      });
-
-      const { signature, ...finalPaymentData } = paymentData;
-      void signature;
-
-      const response = await axios.post(
-        this.getPaymentUrl(),
-        new URLSearchParams(finalPaymentData).toString()
-      );
-
-      if (response.status !== 200) {
-        throw new Error(
-          `PayFast API error: ${response.status} ${response.statusText}`
-        );
-      }
-
-      return {
-        success: true,
-        transactionId,
-        data: await response.data,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error:
-          error instanceof Error ? error.message : "Payment creation failed",
-      };
-    }
-  }
+function formatDateToPayFast(date: Date): string {
+  return date.toISOString().split("T")[0];
 }
 
-// Initialize PayFast service
-export const payFastService = new PayFastService({
-  merchantId: process.env.PAYFAST_MERCHANT_ID || "",
-  merchantKey: process.env.PAYFAST_MERCHANT_KEY || "",
-  passphrase: process.env.PAYFAST_PASSPHRASE || "",
-  sandbox: process.env.NODE_ENV !== "production",
-});
+export function getPayFastUrl() {
+  return config.sandbox
+    ? "https://sandbox.payfast.co.za/eng/process"
+    : "https://www.payfast.co.za/eng/process";
+}
+
+export function generateSignature(data: Record<string, string>): string {
+  // Create parameter string
+  const paramString = Object.keys(data)
+    .filter((key) => key !== "signature")
+    .sort()
+    .map(
+      (key) => `${key}=${encodeURIComponent(data[key]).replace(/%20/g, "+")}`
+    )
+    .join("&");
+
+  // Add passphrase if provided
+  const stringToHash = config.passphrase
+    ? `${paramString}&passphrase=${encodeURIComponent(config.passphrase)}`
+    : paramString;
+
+  // Generate MD5 hash
+  return crypto.createHash("md5").update(stringToHash).digest("hex");
+}
+
+export function validateSignature(data: Record<string, string>): boolean {
+  const receivedSignature = data.signature;
+  const calculatedSignature = generateSignature(data);
+  return receivedSignature === calculatedSignature;
+}
+
+export async function validatePayment(
+  data: Record<string, string>
+): Promise<boolean> {
+  if (!validateSignature(data)) {
+    console.error("PayFast signature validation failed");
+    return false;
+  }
+
+  const validUrl = config.sandbox
+    ? "https://sandbox.payfast.co.za/eng/query/validate"
+    : "https://www.payfast.co.za/eng/query/validate";
+
+  const response = await axios.post(
+    validUrl,
+    new URLSearchParams(data).toString(),
+    {
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+    }
+  );
+
+  return String(response.data).trim() === "VALID";
+}
+
+export function buildPayFastData({
+  data,
+  transactionId,
+  isSubscription,
+  subscriptionDetails,
+}: {
+  data: PaymentData;
+  transactionId: string;
+  isSubscription?: boolean;
+  subscriptionDetails?: {
+    recurringAmount: string;
+    frequency: number;
+    cycles?: number;
+    billingDate?: string;
+  };
+}) {
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL?.startsWith("http")
+    ? process.env.NEXT_PUBLIC_BASE_URL
+    : `https://${process.env.NEXT_PUBLIC_BASE_URL}`;
+
+  const merchantId = Number(config.merchantId);
+
+  let payFastData: PayFastPaymentData = {
+    merchant_id: merchantId,
+    merchant_key: config.merchantKey,
+    return_url: `${baseUrl}/payment/success?txn=${transactionId}`,
+    cancel_url: `${baseUrl}/payment/cancel?txn=${transactionId}`,
+    notify_url: `${baseUrl}/api/payfast/notify`,
+
+    name_first: data.firstName,
+    name_last: data.lastName,
+    email_address: data.email,
+
+    m_payment_id: transactionId,
+    amount: Number(data.amount).toFixed(2),
+    item_name: data.name,
+    item_description: data.description,
+    custom_str1: transactionId,
+    custom_str2: data.email,
+    custom_str3: new Date().toISOString(),
+
+    email_confirmation: "1",
+    confirmation_address: data.email,
+  };
+
+  if (isSubscription && subscriptionDetails) {
+    payFastData = {
+      ...payFastData,
+      subscription_type: 1,
+      amount: Number(subscriptionDetails.recurringAmount).toFixed(2),
+      recurring_amount: Number(subscriptionDetails.recurringAmount).toFixed(2),
+      frequency: [1, 2, 3, 4, 6, 7].includes(subscriptionDetails.frequency)
+        ? (subscriptionDetails.frequency as 1 | 2 | 3 | 4 | 6 | 7)
+        : undefined,
+      cycles: subscriptionDetails.cycles,
+      billing_date: subscriptionDetails.billingDate
+        ? formatDateToPayFast(new Date(subscriptionDetails.billingDate))
+        : formatDateToPayFast(new Date()),
+    };
+  }
+
+  // Convert all values to strings for signature generation
+  const payFastDataString: Record<string, string> = Object.fromEntries(
+    Object.entries(payFastData).map(([key, value]) => [
+      key,
+      value !== undefined && value !== null ? String(value) : "",
+    ])
+  );
+
+  const signature = generateSignature(payFastDataString);
+
+  return {
+    ...payFastData,
+    signature,
+  };
+}

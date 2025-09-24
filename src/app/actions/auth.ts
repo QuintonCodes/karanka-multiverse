@@ -2,68 +2,13 @@
 
 import { createSession, hashPassword, verifyPassword } from "@/lib/auth";
 import { db } from "@/lib/db";
+import {
+  loginSchema,
+  registerSchema,
+  resendSchema,
+  verifySchema,
+} from "@/lib/schemas/auth";
 import { sendVerificationEmail } from "@/lib/services/email-service";
-import { z } from "zod";
-
-const registerSchema = z
-  .object({
-    firstName: z
-      .string()
-      .min(2, "First name must be at least 2 characters")
-      .transform((val) => val.trim()),
-
-    lastName: z
-      .string()
-      .min(2, "Last name must be at least 2 characters")
-      .transform((val) => val.trim()),
-
-    email: z
-      .string()
-      .email("Please enter a valid email address")
-      .transform((val) => val.trim().toLowerCase()),
-
-    password: z.string().min(6, "Password must be at least 6 characters"),
-
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match",
-    path: ["confirmPassword"],
-  })
-  .transform((data) => ({
-    firstName: data.firstName,
-    lastName: data.lastName,
-    email: data.email,
-    password: data.password,
-  }));
-
-const loginSchema = z.object({
-  email: z
-    .string()
-    .email("Please enter a valid email address")
-    .transform((val) => val.trim().toLowerCase()),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-});
-
-const verifySchema = z.object({
-  email: z
-    .string()
-    .email("Please enter a valid email address")
-    .transform((val) => val.trim().toLowerCase()),
-
-  code: z
-    .string()
-    .trim()
-    .length(6, "Verification code must be 6 digits")
-    .regex(/^\d+$/, "Verification code must only contain digits"),
-});
-
-const resendSchema = z.object({
-  email: z
-    .string()
-    .email("Please enter a valid email address")
-    .transform((val) => val.trim().toLowerCase()),
-});
 
 async function generateAndStoreOtp(email: string): Promise<string> {
   const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
@@ -113,10 +58,10 @@ export async function registerUser(formData: FormData) {
   const validatedData = registerSchema.safeParse(data);
 
   if (!validatedData.success) {
-    const { fieldErrors } = validatedData.error.flatten();
     return {
+      success: false,
       error: "Some of the form fields are invalid.",
-      details: fieldErrors,
+      details: validatedData.error.flatten().fieldErrors,
     };
   }
 
@@ -128,8 +73,8 @@ export async function registerUser(formData: FormData) {
     });
     if (existingUser) {
       return {
-        error:
-          "An account with this email already exists. Please log in or use a different email.",
+        success: false,
+        error: "User already exists.",
       };
     }
 
@@ -157,17 +102,10 @@ export async function registerUser(formData: FormData) {
 
     return { success: true, user: safeUser };
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return {
-        error:
-          "Invalid input data. Please check the form fields and try again.",
-        details: error.flatten().fieldErrors,
-      };
-    }
-
+    console.error("Registration error:", error);
     return {
-      error:
-        "Unexpected server error during registration. Please try again or contact support.",
+      success: false,
+      error: "Failed registration. Please try again.",
     };
   }
 }
@@ -181,10 +119,10 @@ export async function loginUser(formData: FormData) {
   const validatedData = loginSchema.safeParse(data);
 
   if (!validatedData.success) {
-    const { fieldErrors } = validatedData.error.flatten();
     return {
-      error: "Validation failed.",
-      details: fieldErrors,
+      success: false,
+      error: "Some of the form fields are invalid.",
+      details: validatedData.error.flatten().fieldErrors,
     };
   }
 
@@ -202,17 +140,26 @@ export async function loginUser(formData: FormData) {
       },
     });
     if (!user) {
-      return { error: "Invalid email or password" };
+      return {
+        success: false,
+        error: "Incorrect email or password.",
+      };
     }
 
     if (!user.isVerified) {
-      return { error: "Please verify your email before logging in" };
+      return {
+        success: false,
+        error: "Email not verified.",
+      };
     }
 
     const isValidPassword = await verifyPassword(password, user.password);
 
     if (!isValidPassword) {
-      return { error: "Invalid email or password" };
+      return {
+        success: false,
+        error: "Incorrect email or password.",
+      };
     }
 
     await createSession(user.id, user.email);
@@ -222,15 +169,10 @@ export async function loginUser(formData: FormData) {
 
     return { success: true, user: safeUser };
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return {
-        error: "Validation failed.",
-        details: error.flatten().fieldErrors,
-      };
-    }
+    console.error("Login error:", error);
     return {
-      error:
-        "Unexpected server error during login. Please try again or contact support.",
+      success: false,
+      error: "Login failed. Please try again.",
     };
   }
 }
@@ -244,10 +186,10 @@ export async function verifyEmail(formData: FormData) {
   const validatedData = verifySchema.safeParse(data);
 
   if (!validatedData.success) {
-    const { fieldErrors } = validatedData.error.flatten();
     return {
-      error: "Some of the form fields are invalid.",
-      details: fieldErrors,
+      success: false,
+      error: "Invalid verification data.",
+      details: validatedData.error.flatten().fieldErrors,
     };
   }
 
@@ -256,7 +198,10 @@ export async function verifyEmail(formData: FormData) {
   try {
     const isValid = await validateOtp(email, code);
     if (!isValid) {
-      return { error: "Invalid or expired verification code" };
+      return {
+        success: false,
+        error: "Invalid or expired verification code.",
+      };
     }
 
     const user = await db.user.update({
@@ -269,9 +214,6 @@ export async function verifyEmail(formData: FormData) {
         subscriptions: true,
       },
     });
-    if (!user) {
-      return { error: "User not found" };
-    }
 
     // Create session for the user
     await createSession(user.id, user.email);
@@ -285,10 +227,11 @@ export async function verifyEmail(formData: FormData) {
       user: safeUser,
     };
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return { error: error.errors[0].message };
-    }
-    return { error: "Verification failed. Please try again." };
+    console.error("Verification error:", error);
+    return {
+      success: false,
+      error: "Verification failed. Please try again.",
+    };
   }
 }
 
@@ -297,9 +240,10 @@ export async function resendVerificationCode(formData: FormData) {
   const validatedData = resendSchema.safeParse({ email });
 
   if (!validatedData.success) {
-    const { fieldErrors } = validatedData.error.flatten();
     return {
-      error: fieldErrors.email?.[0] ?? "Invalid email address",
+      success: false,
+      error: "Invalid email address.",
+      details: validatedData.error.flatten().fieldErrors,
     };
   }
 
@@ -308,11 +252,17 @@ export async function resendVerificationCode(formData: FormData) {
       where: { email: validatedData.data.email },
     });
     if (!user) {
-      return { error: "User not found" };
+      return {
+        success: false,
+        error: "User not found.",
+      };
     }
 
     if (user.isVerified) {
-      return { error: "Email is already verified" };
+      return {
+        success: false,
+        error: "Email is already verified",
+      };
     }
 
     // Generate new OTP
@@ -321,9 +271,10 @@ export async function resendVerificationCode(formData: FormData) {
 
     return { success: true, message: "Verification code sent successfully" };
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return { error: error.errors[0].message };
-    }
-    return { error: "Failed to resend verification code. Please try again." };
+    console.error("Resend verification error:", error);
+    return {
+      success: false,
+      error: "Failed to resend verification code.",
+    };
   }
 }

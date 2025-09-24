@@ -18,7 +18,7 @@ type Stat = {
   icon: JSX.Element;
 };
 
-export function cn(...inputs: ClassValue[]) {
+export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs));
 }
 
@@ -36,7 +36,7 @@ export function formatPrice(
   }).format(price);
 }
 
-export function formatDate(date: Date) {
+export function formatDate(date: Date): string {
   return new Intl.DateTimeFormat("en-ZA", {
     year: "numeric",
     month: "short",
@@ -46,7 +46,7 @@ export function formatDate(date: Date) {
   }).format(date);
 }
 
-export function formatTime(date: Date) {
+export function formatTime(date: Date): string {
   const now = new Date();
   const diff = now.getTime() - date.getTime();
   const minutes = Math.floor(diff / 60000);
@@ -57,6 +57,12 @@ export function formatTime(date: Date) {
   if (hours < 24) return `${hours}h ago`;
   const days = Math.floor(hours / 24);
   return `${days}d ago`;
+}
+
+export function formatResendTime(ms: number): string {
+  const minutes = Math.floor(ms / 60000);
+  const seconds = Math.floor((ms % 60000) / 1000);
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
 // Calculation functions
@@ -98,7 +104,7 @@ export function getStatusColor(status: string) {
   }
 }
 
-export function getStatDisplay(stat: Stat) {
+export function getStatDisplay(stat: Stat): string {
   switch (stat.id) {
     case "total_profit":
       return formatPrice(stat.number, "USD");
@@ -106,5 +112,24 @@ export function getStatDisplay(stat: Stat) {
       return `${stat.number}%`;
     default:
       return `${stat.number}`;
+  }
+}
+
+export function getChainName(chainId: number) {
+  switch (chainId) {
+    case 1:
+      return "Ethereum Mainnet";
+    case 5:
+      return "Goerli Testnet";
+    case 56: // BSC Mainnet
+      return "BSC Mainnet";
+    case 97: // BSC Testnet
+      return "BSC Testnet";
+    case 137:
+      return "Polygon Mainnet";
+    case 80001:
+      return "Polygon Mumbai Testnet";
+    default:
+      return `Chain ID ${chainId}`;
   }
 }

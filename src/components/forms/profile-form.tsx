@@ -47,13 +47,16 @@ export default function ProfileForm({
       const result = await updateAccount(formData);
 
       if (result.error) {
-        toast.error(result.error);
+        if (result.details) {
+          toast.error("Please correct the highlighted fields.");
+        } else {
+          toast.error("Update profile failed", { description: result.error });
+        }
         return;
       }
 
       toast.success("Account updated successfully!");
       updateUser(result.user);
-      userForm.reset();
     } catch (error) {
       console.error("Error updating account:", error);
       toast.error(

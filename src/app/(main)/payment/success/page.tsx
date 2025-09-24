@@ -1,94 +1,90 @@
 "use client";
 
-import { Prisma } from "@prisma/client";
+import axios from "axios";
 import { ArrowRight, CheckCircle } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { handlePayFastReturn } from "@/app/actions/payment";
 import { Button } from "@/components/ui/button";
-import MainSection from "@/components/ui/main-section";
+import { MainSection } from "@/components/ui/main-section";
 import { useAuth } from "@/context/auth-provider";
 import { formatPrice } from "@/lib/utils";
+
+type PaymentDetails = {
+  id: string;
+  amount: number;
+  status: "pending" | "confirmed" | "failed" | "expired" | "refunded";
+  productType: "onceOff" | "subscription" | "tokenPackage" | "unavailable";
+  productName: string;
+  productTokens?: number;
+};
 
 export default function PaymentSuccessPage() {
   const searchParams = useSearchParams();
   const [paymentStatus, setPaymentStatus] = useState<
     "loading" | "success" | "error"
   >("loading");
-  const [paymentDetails, setPaymentDetails] = useState<{
-    success: boolean;
-    paymentId?: string;
-    amount?: number;
-    message?: string;
-    error?: string;
-  }>({
-    success: false,
-    error: undefined,
-    paymentId: "",
-    amount: 0,
-    message: "",
-  });
+  const [paymentDetails, setPaymentDetails] = useState<PaymentDetails | null>(
+    null
+  );
 
+  const transactionId = searchParams.get("txn") || "";
   const { updateUser } = useAuth();
 
   useEffect(() => {
-    const processPayment = async () => {
-      const params: Record<string, string> = {};
-      searchParams.forEach((value, key) => {
-        params[key] = value;
-      });
+    async function processPayment() {
+      if (!transactionId) {
+        setPaymentStatus("error");
+        return;
+      }
 
-      if (Object.keys(params).length > 0) {
-        const result = await handlePayFastReturn(params);
+      try {
+        const response = await axios.get(`/api/payments/${transactionId}`);
+        if (response.status !== 200) {
+          setPaymentStatus("error");
+          return;
+        }
 
-        if (result.success) {
+        const data = response.data;
+
+        if (!data) {
+          setPaymentStatus("error");
+          return;
+        }
+
+        setPaymentDetails(data);
+
+        if (data.payment.status === "confirmed") {
           setPaymentStatus("success");
-          setPaymentDetails(result);
 
-          // If it's a token purchase, add tokens to user account
-          const customStr1 = params.custom_str1;
-          if (customStr1 === "token_purchase") {
-            const tokens = Number.parseInt(params.custom_int1 || "0");
-            if (tokens > 0) {
-              updateUser({
-                wallet: {
-                  balance: new Prisma.Decimal(tokens),
-                  address: "",
-                  id: "",
-                  isVerified: false,
-                  createdAt: new Date(),
-                  updatedAt: new Date(),
-                  userId: "",
-                  value: new Prisma.Decimal(0),
-                  chain: "",
-                },
-              });
-            }
+          // If tokens purchased, update user wallet locally
+          if (
+            data.payment.productType === "tokenPackage" &&
+            data.payment.productTokens &&
+            data.payment.productTokens > 0
+          ) {
+            updateUser((prev) => ({
+              ...prev,
+              wallet: {
+                ...prev.wallet!,
+                balance:
+                  (Number(prev.wallet?.balance) || 0) +
+                  data.payment.productTokens!,
+              },
+            }));
           }
-
-          // Add completed transaction
-          // addTransaction({
-          //   userId: params.custom_str2 || "unknown",
-          //   type: customStr1 === "token_purchase" ? "token_purchase" : "purchase",
-          //   amount: Number.parseFloat(params.amount_gross || "0") / 18.5, // Convert ZAR back to USD
-          //   zarAmount: Number.parseFloat(params.amount_gross || "0"),
-          //   tokens: customStr1 === "token_purchase" ? Number.parseInt(params.custom_int1 || "0") : undefined,
-          //   description: `Payment completed - ${params.item_name}`,
-          //   status: "completed",
-          //   paymentMethod: "payfast",
-          // })
         } else {
           setPaymentStatus("error");
         }
-      } else {
+      } catch (error) {
+        console.error("Error fetching payment:", error);
         setPaymentStatus("error");
       }
-    };
+    }
 
     processPayment();
-  }, [searchParams, updateUser]);
+  }, [searchParams, transactionId, updateUser]);
 
   return (
     <MainSection className="mx-auto px-4 py-32">
@@ -123,10 +119,8 @@ export default function PaymentSuccessPage() {
                 </h3>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-[#EBEBEB]/70">Payment ID:</span>
-                    <span className="text-[#EBEBEB]">
-                      {paymentDetails.paymentId}
-                    </span>
+                    <span className="text-[#EBEBEB]/70">Transaction ID:</span>
+                    <span className="text-[#EBEBEB]">{transactionId}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-[#EBEBEB]/70">Amount:</span>
@@ -143,8 +137,8 @@ export default function PaymentSuccessPage() {
                 className="w-full border border-[#EBEBEB]/20 bg-gradient-to-r from-[#121C2B] to-[#11120E] hover:border-[#EBEBEB]/40"
                 asChild
               >
-                <Link href="/dashboard">
-                  Go to Dashboard
+                <Link href="/">
+                  Go to Home
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>

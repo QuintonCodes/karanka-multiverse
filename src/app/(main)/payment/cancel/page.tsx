@@ -2,7 +2,7 @@ import { ArrowLeft, XCircle } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
-import MainSection from "@/components/ui/main-section";
+import { MainSection } from "@/components/ui/main-section";
 
 export default function PaymentCancelPage() {
   return (

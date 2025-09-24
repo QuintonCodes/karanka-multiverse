@@ -14,7 +14,10 @@ enum userRoles {
 
 enum paymentMethod {
   debitCard
+  eft
+  creditCard
   tokenPurchase
+  crypto
 }
 
 enum paymentStatus {
@@ -35,13 +38,8 @@ enum paymentType {
 enum productType {
   onceOff
   subscription
+  tokenPackage
   unavailable
-}
-
-enum slugType {
-  basic
-  pro
-  premium
 }
 
 enum subStatus {
@@ -51,34 +49,34 @@ enum subStatus {
 }
 
 model User {
-  id String @id @default(cuid())
-  firstName String
-  lastName String
-  password String
-  email String @unique
-  role userRoles @default(user)
-  avatarUrl String?
+  id         String    @id @default(cuid())
+  firstName  String
+  lastName   String
+  password   String
+  email      String    @unique
+  role       userRoles @default(user)
+  avatarUrl  String?
   isVerified Boolean
-  address String?
-  city String?
+  address    String?
+  city       String?
   postalCode String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  lastLogin   DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  lastLogin  DateTime?
 
-  payments Payment[]
-  transactions Transaction[]
-  wallet Wallet?
-  otpCodes OtpCode[]
+  payments      Payment[]
+  transactions  Transaction[]
+  wallet        Wallet?
+  otpCodes      OtpCode[]
   subscriptions Subscription[]
 }
 
 model OtpCode {
-  id String @id @default(cuid())
-  userId String
-  email String
-  code String @unique
-  used Boolean @default(false)
+  id        String   @id @default(cuid())
+  userId    String
+  email     String
+  code      String   @unique
+  used      Boolean  @default(false)
   expiresAt DateTime
   createdAt DateTime @default(now())
 
@@ -86,100 +84,90 @@ model OtpCode {
 }
 
 model Wallet {
-  id String @id @default(cuid())
-  userId String @unique
-  balance Decimal @default(0) // in KRKUNI Tokens
-  value Decimal @default(0) // In ZAR (Rands)
-  address String @unique
-  chain String @default("bsc")
-  isVerified Boolean @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id     String @id @default(cuid())
+  userId String? @unique
 
-  user User @relation(fields: [userId], references: [id])
-}
+  balance  Decimal @default(0) // KRKUNI Balance
+  valueZar Decimal? // In ZAR (Rands)
 
-model Product {
-  id String @id @default(cuid())
-  slug String @unique
-  name String
-  description String?
-  price Decimal @default(0)
-  zarPrice Decimal @default(0)
-  image String?
-  tokens Int
-  productType productType
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  address    String   @unique
+  chain      String?
+  nonce String?
+  isVerified Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  payments Payment[]
-  subscriptions Subscription[]
-}
-
-model TokenPackage {
-  id          String   @id @default(cuid())
-  slug slugType @unique
-  name        String
-  description String?
-  tokens Int
-  price    Decimal
-  zarPrice    Decimal
-  features String[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  payments Payment[]
+  user User? @relation(fields: [userId], references: [id])
 }
 
 model Payment {
-  id String @id @default(cuid())
-  userId String
-  productId String?
-  tokenPackageId String?
-  amount Decimal @default(0)
-  paymentMethod paymentMethod
-  status paymentStatus @default(pending)
-  transactionReference String? @unique
-  paymentDate DateTime @default(now())
+  id                   String         @id @default(cuid())
+  userId               String
+  productId            String?
+  amount               Decimal        @default(0) // ZAR amount charged by PayFast
+  paymentMethod        paymentMethod?
+  status               paymentStatus  @default(pending)
+  transactionReference String?        @unique
+  paymentDate          DateTime       @default(now())
 
-  user User @relation(fields: [userId], references: [id])
-  transaction Transaction?
+  productName   String
+  productSlug   String
+  productType   productType
+  productTokens Decimal     @default(0)
+  productPrice  Decimal     @default(0)
+
+  user         User          @relation(fields: [userId], references: [id])
+  transaction  Transaction?
   subscription Subscription?
-  product Product? @relation(fields: [productId], references: [id])
-  tokenPackage TokenPackage? @relation(fields: [tokenPackageId], references: [id])
+  items        PaymentItem[]
+}
+
+model PaymentItem {
+  id        String @id @default(cuid())
+  paymentId String
+  productId String
+  quantity  Int    @default(1)
+
+  payment Payment @relation(fields: [paymentId], references: [id])
 }
 
 model Transaction {
-  id String @id @default(cuid())
-  userId String
-  paymentId String? @unique
-  from String
-  to String
-  amount Decimal @default(0)
-  type paymentType
-  status paymentStatus @default(pending)
-  paymentMethod paymentMethod
-  txHash String? @unique
-  confirmed Boolean @default(false)
-  gasUsed Int?
-  timestamp DateTime @default(now())
+  id            String         @id @default(cuid())
+  userId        String
+  paymentId     String?        @unique
+  from          String
+  to            String
+  amount        Decimal        @default(0) // In KRKUNI or ZAR
+  type          paymentType
+  status        paymentStatus  @default(pending)
+  paymentMethod paymentMethod?
+  txHash        String?        @unique
+  confirmed     Boolean        @default(false)
+  gasUsed       Int?
+  timestamp     DateTime       @default(now())
 
-  user User @relation(fields: [userId], references: [id])
+  user    User     @relation(fields: [userId], references: [id])
   payment Payment? @relation(fields: [paymentId], references: [id])
 }
 
 model Subscription {
-  id String @id @default(cuid())
-  userId String
-  productId String
-  paymentId String? @unique
-  startsAt DateTime @default(now())
-  endsAt DateTime
+  id          String    @id @default(cuid())
+  userId      String
+  productId   String
+  paymentId   String?   @unique
+  amount      Decimal   @default(0) // ZAR amount charged by PayFast
+  startsAt    DateTime  @default(now())
+  endsAt      DateTime
   cancelledAt DateTime?
-  autoRenew Boolean @default(false)
-  status subStatus @default(active)
+  autoRenew   Boolean   @default(false)
+  status      subStatus @default(active)
 
-  user User @relation(fields: [userId], references: [id])
-  product Product @relation(fields: [productId], references: [id])
+  productName   String
+  productSlug   String
+  productType   productType
+  productTokens Decimal     @default(0)
+  productPrice  Decimal     @default(0)
+
+  user    User     @relation(fields: [userId], references: [id])
   payment Payment? @relation(fields: [paymentId], references: [id])
 }

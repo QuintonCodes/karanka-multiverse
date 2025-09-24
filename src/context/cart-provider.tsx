@@ -5,7 +5,6 @@ import { persist } from "zustand/middleware";
 
 export type CartItem = Product & {
   quantity: number;
-  selectedVariant?: ProductVariant;
 };
 
 type CartStore = {
@@ -17,6 +16,12 @@ type CartStore = {
 };
 
 const CartContext = createContext<StoreApi<CartStore> | undefined>(undefined);
+
+function getItemType(product: Product, variant?: ProductVariant) {
+  const isSubscription =
+    (variant ? variant.isSubscription : product.isSubscription) ?? false;
+  return isSubscription ? "subscription" : "once-off";
+}
 
 export default function CartProvider({
   children,
@@ -30,8 +35,23 @@ export default function CartProvider({
           items: [],
           addItem: (product, variant) => {
             const currentItems = get().items;
+
+            const newItemType = getItemType(product, variant);
+
+            if (currentItems.length > 0) {
+              const cartType = getItemType(
+                currentItems[0],
+                currentItems[0].selectedVariant
+              );
+              if (cartType !== newItemType) {
+                return;
+              }
+            }
+
             const existingItem = currentItems.find(
-              (item) => item.id === product.id
+              (item) =>
+                item.id === product.id &&
+                (!variant || item.selectedVariant?.id === variant.id)
             );
 
             if (existingItem) {

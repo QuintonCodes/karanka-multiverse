@@ -45,15 +45,6 @@ export const products: Product[] = [
       image: "/products/trading-bot.webp",
       variants: [
         {
-          id: "weekly",
-          name: "Weekly Access",
-          price,
-          zarPrice,
-          tokens: price / 4,
-          description: "7 days of trading signals",
-          isSubscription: true,
-        },
-        {
           id: "monthly",
           name: "Monthly Access",
           price: 43,

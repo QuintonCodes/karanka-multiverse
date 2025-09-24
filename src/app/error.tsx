@@ -13,7 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import MainSection from "@/components/ui/main-section";
+import { MainSection } from "@/components/ui/main-section";
 
 export default function Error({
   error,
@@ -79,10 +79,7 @@ export default function Error({
             </Button>
 
             <Link href="/" className="block">
-              <Button
-                variant="ghost"
-                className="w-full text-[#EBEBEB]/70 hover:text-[#EBEBEB]"
-              >
+              <Button variant="ghost" className="w-full text-[#EBEBEB]/70">
                 <Home className="mr-2 h-4 w-4" />
                 Return Home
               </Button>

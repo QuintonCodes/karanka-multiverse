@@ -1,97 +1,68 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Eye, EyeOff, Mail, Wallet } from "lucide-react";
+import { ArrowLeft, Loader2, Mail, Wallet } from "lucide-react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { z } from "zod";
+import { signMessage } from "wagmi/actions";
 
-import { loginUser } from "@/app/actions/auth";
+import { getWalletNonce, verifyWalletLogin } from "@/app/actions/metamask";
 import { MetaMaskConnect } from "@/components/metamask-connect";
 import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import MainSection from "@/components/ui/main-section";
+import { MainSection } from "@/components/ui/main-section";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/context/auth-provider";
-import { useMetaMaskStore } from "@/lib/stores/metamask-store";
-
-const loginSchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-});
-
-type LoginFormValues = z.infer<typeof loginSchema>;
+import { useWalletConnection } from "@/hooks/use-wallet-connection";
+import { config } from "@/lib/wagmi";
+import LoginForm from "./login-form";
 
 export default function LoginPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const { setUser } = useAuth();
-  const { isConnected } = useMetaMaskStore();
+  const { isConnected, address } = useWalletConnection();
 
-  // TODO: 1. Add forget password functionality
-
-  const loginForm = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
-  });
-
-  async function onSubmit(data: LoginFormValues) {
-    const formData = new FormData();
-    formData.append("email", data.email);
-    formData.append("password", data.password);
+  async function handleMetaMaskLogin() {
+    if (!isConnected || !address) {
+      toast.error("Please connect your MetaMask wallet first.");
+      return;
+    }
 
     try {
-      const result = await loginUser(formData);
+      setIsLoading(true);
 
-      if (result.error) {
-        if (result.details) {
-          Object.entries(result.details).forEach(([field, messages]) => {
-            if (messages && messages.length > 0) {
-              loginForm.setError(field as keyof LoginFormValues, {
-                type: "server",
-                message: messages[0],
-              });
-            }
-          });
+      const nonceResponse = await getWalletNonce(address);
+      if (!nonceResponse.success || !nonceResponse.nonce) {
+        toast.error(nonceResponse.error || "Failed to get nonce.");
+        return;
+      }
 
-          toast.error("Please correct the highlighted fields.");
-        } else {
-          toast.error("Login failed", {
-            description: result.error || "An unexpected error occurred.",
-          });
-        }
+      let signature: string;
+      try {
+        signature = await signMessage(config, { message: nonceResponse.nonce });
+      } catch (error) {
+        console.error("Signature error:", error);
+        toast.error("Message signing was cancelled.");
+        return;
+      }
+
+      const result = await verifyWalletLogin(address, signature);
+      if (!result.success) {
+        toast.error(result.error || "MetaMask login failed.");
         return;
       }
 
       setUser(result.user);
 
-      toast.success("Welcome back!", {
-        description: "You have been successfully logged in.",
-      });
-
-      loginForm.reset();
-      router.push(searchParams.get("redirect") || "/");
+      toast.success("Logged in successfully!");
+      router.push("/");
     } catch (error) {
-      toast.error("Something went wrong", {
-        description:
-          error instanceof Error ? error.message : "Please try again.",
-      });
+      console.error("MetaMask login error:", error);
+      toast.error("MetaMask login failed. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -120,14 +91,14 @@ export default function LoginPage() {
             <TabsList className="grid w-full grid-cols-2 bg-[#121C2B]/50">
               <TabsTrigger
                 value="email"
-                className="flex items-center space-x-2"
+                className="flex items-center space-x-2 text-[#EBEBEB] data-[state=active]:text-foreground"
               >
                 <Mail className="h-4 w-4" />
                 <span>Email</span>
               </TabsTrigger>
               <TabsTrigger
                 value="metamask"
-                className="flex items-center space-x-2"
+                className="flex items-center space-x-2 text-[#EBEBEB] data-[state=active]:text-foreground"
               >
                 <Wallet className="h-4 w-4" />
                 <span>MetaMask</span>
@@ -135,75 +106,7 @@ export default function LoginPage() {
             </TabsList>
 
             <TabsContent value="email" className="space-y-6 mt-6">
-              <Form {...loginForm}>
-                <form
-                  onSubmit={loginForm.handleSubmit(onSubmit)}
-                  className="space-y-6"
-                >
-                  <FormField
-                    control={loginForm.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email Address</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="email"
-                            placeholder="Enter your email"
-                            {...field}
-                            className="border-[#EBEBEB]/20 bg-[#121C2B]/30 focus-visible:border-[#EBEBEB]/40 focus-visible:ring-[#EBEBEB]/20"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={loginForm.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Password</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <Input
-                              type={showPassword ? "text" : "password"}
-                              placeholder="Enter your password"
-                              {...field}
-                              className="border-[#EBEBEB]/20 bg-[#121C2B]/30 focus-visible:border-[#EBEBEB]/40 focus-visible:ring-[#EBEBEB]/20 pr-10"
-                            />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                              onClick={() => setShowPassword(!showPassword)}
-                            >
-                              {showPassword ? (
-                                <EyeOff className="h-4 w-4 text-[#EBEBEB]/70" />
-                              ) : (
-                                <Eye className="h-4 w-4 text-[#EBEBEB]/70" />
-                              )}
-                            </Button>
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <Button
-                    type="submit"
-                    disabled={loginForm.formState.isSubmitting}
-                    className="w-full border border-[#EBEBEB]/20 bg-gradient-to-r from-[#121C2B] to-[#11120E] hover:border-[#EBEBEB]/40"
-                  >
-                    {loginForm.formState.isSubmitting
-                      ? "Logging in..."
-                      : "Login"}
-                  </Button>
-                </form>
-              </Form>
+              <LoginForm />
             </TabsContent>
 
             <TabsContent value="metamask" className="space-y-6 mt-6">
@@ -221,19 +124,25 @@ export default function LoginPage() {
               </div>
 
               {/* MetaMask Connect */}
-              <MetaMaskConnect />
+              <MetaMaskConnect showBalance={true} />
 
-              {isConnected && (
-                <Button
-                  // onClick={handleMetaMaskLogin}
-                  // disabled={isSubmitting}
-                  className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-medium"
-                >
-                  {loginForm.formState.isSubmitting
-                    ? "Logging in..."
-                    : "Login with MetaMask"}
-                </Button>
-              )}
+              <Button
+                onClick={handleMetaMaskLogin}
+                disabled={!isConnected || isLoading}
+                className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-medium"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Logging in...
+                  </>
+                ) : (
+                  <>
+                    <Wallet className="mr-2 h-4 w-4" />
+                    Login with MetaMask
+                  </>
+                )}
+              </Button>
             </TabsContent>
           </Tabs>
 

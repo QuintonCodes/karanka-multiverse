@@ -18,7 +18,7 @@ import { JSX } from "react";
 import ProductCard from "@/components/product-card";
 import TradingSignals from "@/components/trading-signals";
 import { Button } from "@/components/ui/button";
-import MainSection from "@/components/ui/main-section";
+import { MainSection } from "@/components/ui/main-section";
 import { useAuth } from "@/context/auth-provider";
 import { products } from "@/lib/products";
 

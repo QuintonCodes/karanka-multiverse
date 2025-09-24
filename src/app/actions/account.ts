@@ -7,23 +7,26 @@ import { accountSchema, avatarSchema } from "@/lib/schemas/account";
 export async function uploadAvatar(formData: FormData) {
   const file = formData.get("avatar");
 
-  const result = avatarSchema.safeParse({ avatar: file });
+  const validatedData = avatarSchema.safeParse({ avatar: file });
 
-  if (!result.success) {
-    const { fieldErrors } = result.error.flatten();
+  if (!validatedData.success) {
     return {
+      success: false,
       error: "Validation failed.",
-      details: fieldErrors,
+      details: validatedData.error.flatten().fieldErrors,
     };
   }
 
-  const { avatar } = result.data;
+  const { avatar } = validatedData.data;
 
   try {
     const session = await getSession();
 
     if (!session?.userId) {
-      return { error: "User not authenticated" };
+      return {
+        success: false,
+        error: "User not authenticated",
+      };
     }
 
     const imageBuffer = await avatar.arrayBuffer();
@@ -45,10 +48,10 @@ export async function uploadAvatar(formData: FormData) {
 
     return { success: true, user: safeUser };
   } catch (error) {
-    console.error("Error uploading avatar:", error);
+    console.error("Avatar upload error:", error);
     return {
-      error:
-        "Unexpected server error while uploading avatar. Please try again later.",
+      success: false,
+      error: "Failed to upload avatar image. Please try again.",
     };
   }
 }
@@ -66,10 +69,10 @@ export async function updateAccount(formData: FormData) {
   const validatedData = accountSchema.safeParse(data);
 
   if (!validatedData.success) {
-    const { fieldErrors } = validatedData.error.flatten();
     return {
+      success: false,
       error: "Validation failed.",
-      details: fieldErrors,
+      details: validatedData.error.flatten().fieldErrors,
     };
   }
 
@@ -102,10 +105,10 @@ export async function updateAccount(formData: FormData) {
 
     return { success: true, user: safeUser };
   } catch (error) {
-    console.error("Error updating account:", error);
+    console.error("Account update error:", error);
     return {
-      error:
-        "Unexpected server error while updating account. Please try again later.",
+      success: false,
+      error: "Failed to update profile. Please try again.",
     };
   }
 }

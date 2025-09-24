@@ -17,7 +17,7 @@ type FloatingSymbols = {
   left: string;
   symbol: string;
 };
-export default function MainSection({
+export function MainSection({
   children,
   className,
 }: {

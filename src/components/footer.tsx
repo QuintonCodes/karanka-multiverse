@@ -69,13 +69,13 @@ export default function Footer() {
             <h3 className="text-lg font-semibold text-[#EBEBEB]">Support</h3>
             <ul className="space-y-2">
               {[
-                { href: "/help", label: "Help Center" },
-                { href: "/contact", label: "Contact Us" },
-                { href: "/privacy", label: "Privacy Policy" },
-                { href: "/terms", label: "Terms of Service" },
-                { href: "/faq", label: "FAQ" },
-              ].map((link) => (
-                <li key={link.href}>
+                { href: "#", label: "Help Center" },
+                { href: "#", label: "Contact Us" },
+                { href: "#", label: "Privacy Policy" },
+                { href: "#", label: "Terms of Service" },
+                { href: "#", label: "FAQ" },
+              ].map((link, index) => (
+                <li key={index}>
                   <Link
                     href={link.href}
                     className="text-sm text-[#EBEBEB]/70 transition-colors hover:text-[#EBEBEB]"
@@ -134,9 +134,9 @@ export default function Footer() {
                 { icon: FaTwitter, href: "#", label: "Twitter" },
                 { icon: FaInstagram, href: "#", label: "Instagram" },
                 { icon: FaWhatsapp, href: "#", label: "Whatsapp" },
-              ].map((social) => (
+              ].map((social, index) => (
                 <Button
-                  key={social.label}
+                  key={index}
                   variant="ghost"
                   size="icon"
                   className="text-[#EBEBEB]/70 hover:text-[#EBEBEB] hover:bg-transparent transition-all"

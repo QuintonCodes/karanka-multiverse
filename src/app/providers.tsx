@@ -1,24 +1,13 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useState } from "react";
 import { WagmiProvider } from "wagmi";
 
 import AuthProvider, { useAuth } from "@/context/auth-provider";
 import CartProvider from "@/context/cart-provider";
 import { config } from "@/lib/wagmi";
 import Loading from "./loading";
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      gcTime: 1000 * 60 * 60 * 24, // 24 hours
-      networkMode: "offlineFirst",
-      refetchOnWindowFocus: false,
-      retry: 0,
-    },
-    mutations: { networkMode: "offlineFirst" },
-  },
-});
 
 function InternalProviders({ children }: { children: React.ReactNode }) {
   const { isLoading } = useAuth();
@@ -31,6 +20,18 @@ function InternalProviders({ children }: { children: React.ReactNode }) {
 }
 
 export default function Providers({ children }: { children: React.ReactNode }) {
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            refetchOnWindowFocus: false,
+            staleTime: 1000 * 60,
+          },
+        },
+      })
+  );
+
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>

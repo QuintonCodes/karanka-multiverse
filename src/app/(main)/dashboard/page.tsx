@@ -10,9 +10,11 @@ import {
 import { motion } from "motion/react";
 import { JSX } from "react";
 
+import { EmptyCard } from "@/components/empty-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import MainSection from "@/components/ui/main-section";
+import { MainSection } from "@/components/ui/main-section";
+import { useAuth } from "@/context/auth-provider";
 import { formatPrice, formatTime, getStatDisplay } from "@/lib/utils";
 
 type Signal = {
@@ -98,6 +100,20 @@ const stats: Stat[] = [
 ];
 
 export default function DashboardPage() {
+  const { isAuthenticated } = useAuth();
+
+  if (!isAuthenticated) {
+    return (
+      <MainSection className="mx-auto px-4 py-32 flex justify-center items-center">
+        <EmptyCard
+          title="Please log in to view your dashboard"
+          description="Access your dashboard, subscriptions, and more."
+          showAuthActions
+        />
+      </MainSection>
+    );
+  }
+
   return (
     <MainSection className="mx-auto px-4 py-32">
       <section>
