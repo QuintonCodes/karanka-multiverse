@@ -11,7 +11,6 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
 import { EmptyCard } from "@/components/empty-card";
-import CheckoutForm from "@/components/forms/checkout-form";
 import OrderSummary from "@/components/order-summary";
 import TokenSummary from "@/components/token-summary";
 import {
@@ -27,6 +26,7 @@ import { useAuth } from "@/context/auth-provider";
 import { useCart } from "@/context/cart-provider";
 import { packages } from "@/lib/products";
 import { calculateZarPrice, formatPrice } from "@/lib/utils";
+import CheckoutForm from "./checkout-form";
 
 export default function CheckoutPage() {
   const searchParams = useSearchParams();

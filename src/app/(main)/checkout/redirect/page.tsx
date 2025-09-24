@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
 
-import PayFastForm from "@/components/forms/payfast-form";
 import { MainSection } from "@/components/ui/main-section";
 import { db } from "@/lib/db";
 import { buildPayFastData } from "@/lib/payfast";
+import PayFastForm from "./payfast-form";
 
 export default async function RedirectCheckoutPage({
   searchParams,

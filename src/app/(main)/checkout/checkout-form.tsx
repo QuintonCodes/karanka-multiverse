@@ -21,7 +21,7 @@ import { useAuth, UserType } from "@/context/auth-provider";
 import { CartItem, useCart } from "@/context/cart-provider";
 import { Package } from "@/lib/products";
 import { CheckoutFormValues, checkoutSchema } from "@/lib/schemas/checkout";
-import BillingDetailsFields from "../billing-details-fields";
+import BillingDetailsFields from "../../../components/billing-details-fields";
 
 type CheckoutFormProps = {
   user: UserType | null;

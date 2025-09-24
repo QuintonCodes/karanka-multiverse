@@ -8,8 +8,6 @@ import { signMessage } from "wagmi/actions";
 
 import { getWalletNonce, linkWalletToUser } from "@/app/actions/metamask";
 import { EmptyCard } from "@/components/empty-card";
-import AvatarForm from "@/components/forms/avatar-form";
-import ProfileForm from "@/components/forms/profile-form";
 import { MetaMaskConnect } from "@/components/metamask-connect";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,6 +18,8 @@ import { useAuth } from "@/context/auth-provider";
 import { useWalletConnection } from "@/hooks/use-wallet-connection";
 import { formatDate, formatPrice, getStatusColor } from "@/lib/utils";
 import { config } from "@/lib/wagmi";
+import AvatarForm from "./avatar-form";
+import ProfileForm from "./profile-form";
 
 export default function AccountPage() {
   const { user, updateUser, refreshSession, isAuthenticated } = useAuth();
