@@ -206,7 +206,7 @@ export default function AccountPage() {
 
                     <div className="space-y-6">
                       {/* Token Balance */}
-                      <Card className="border-[#EBEBEB]/10 bg-gradient-to-r from-yellow-500/10 to-orange-500/10">
+                      <Card className="border-[#EBEBEB]/10 bg-linear-to-r from-yellow-500/10 to-orange-500/10">
                         <CardContent className="p-6">
                           <div className="flex items-center justify-between">
                             <div>
@@ -235,7 +235,7 @@ export default function AccountPage() {
                           <div className="space-y-3">
                             <MetaMaskConnect showBalance />
                             <Button
-                              className="bg-gradient-to-r from-[#121C2B] to-[#11120E] border border-[#EBEBEB]/20 hover:border-[#EBEBEB]/40"
+                              className="bg-linear-to-r from-[#121C2B] to-[#11120E] border border-[#EBEBEB]/20 hover:border-[#EBEBEB]/40"
                               onClick={handleLinkWallet}
                               disabled={!isConnected || isLoading}
                             >
@@ -316,13 +316,13 @@ export default function AccountPage() {
                                     {/* USD Price */}
                                     {formatPrice(
                                       Number(transaction.amount || 0),
-                                      "USD"
+                                      "USD",
                                     )}
                                   </div>
                                   <div className="text-sm text-[#EBEBEB]/70">
                                     {/* ZAR Price */}
                                     {formatPrice(
-                                      Number(transaction.amount || 0)
+                                      Number(transaction.amount || 0),
                                     )}
                                   </div>
                                 </div>

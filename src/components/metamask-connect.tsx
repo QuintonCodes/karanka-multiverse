@@ -46,10 +46,10 @@ export function MetaMaskConnect({
     krkuniBalanceError,
     chainName,
     isInstalled,
-    connectAsync,
+    connectWallet,
     connectors,
     isConnectLoading,
-    disconnectAsync,
+    disconnectWallet,
     formattedAddress,
   } = useWalletConnection();
 
@@ -60,7 +60,7 @@ export function MetaMaskConnect({
       const mmConnector =
         connectors.find((connect) => connect.id === "metaMask") ??
         connectors[0];
-      const { accounts } = await connectAsync({
+      const { accounts } = await connectWallet({
         connector: mmConnector,
         chainId: DEFAULT_CHAIN.id,
       });
@@ -70,7 +70,7 @@ export function MetaMaskConnect({
         walletAddress,
         krkuniBalanceRaw,
         DEFAULT_CHAIN.id,
-        user?.id
+        user?.id,
       );
 
       if (!result.success) {
@@ -88,7 +88,7 @@ export function MetaMaskConnect({
 
   async function handleDisconnect() {
     try {
-      await disconnectAsync?.();
+      await disconnectWallet?.();
       toast.success("Disconnected wallet");
     } catch (error) {
       console.error("Disconnect failed:", error);

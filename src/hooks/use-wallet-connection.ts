@@ -1,10 +1,11 @@
 import { formatEther, formatUnits } from "ethers";
 import { useEffect, useState } from "react";
 import {
-  useAccount,
   useBalance,
   useChainId,
   useConnect,
+  useConnection,
+  useConnectors,
   useDisconnect,
   useEnsName,
   useReadContract,
@@ -15,11 +16,17 @@ import krkuniAbi from "@/lib/krkuni-abi.json";
 import { getChainName } from "@/lib/utils";
 import { KRKUNI_TOKEN_ADDRESS, KRKUNI_TOKEN_DECIMALS } from "@/lib/wagmi";
 
+declare global {
+  interface Window {
+    ethereum?: any;
+  }
+}
+
 export const DEFAULT_CHAIN = bsc;
 
 export function useWalletConnection() {
-  const { address, isConnected, connector } = useAccount();
-  const { disconnectAsync } = useDisconnect();
+  const { address, isConnected, connector } = useConnection();
+  const { mutateAsync: disconnectWallet } = useDisconnect();
   const { data: ensName } = useEnsName({ address });
   const chainId = useChainId();
 
@@ -55,11 +62,10 @@ export function useWalletConnection() {
     setIsClient(true);
   }, []);
 
-  const {
-    connectors,
-    connectAsync,
-    isPending: isConnectLoading,
-  } = useConnect();
+  const { mutateAsync: connectWallet, isPending: isConnectLoading } =
+    useConnect();
+
+  const connectors = useConnectors();
   const isInstalled = typeof window !== "undefined" && window.ethereum;
 
   const formattedNativeBalance = nativeBalance
@@ -68,7 +74,7 @@ export function useWalletConnection() {
 
   const formattedKrkuniBalance = krkuniBalanceRaw
     ? Number.parseFloat(
-        formatUnits(krkuniBalanceRaw as bigint, KRKUNI_TOKEN_DECIMALS)
+        formatUnits(krkuniBalanceRaw as bigint, KRKUNI_TOKEN_DECIMALS),
       ).toFixed(4)
     : "0.0000";
 
@@ -91,9 +97,9 @@ export function useWalletConnection() {
     chainName: getChainName(chainId),
     connectorName: connector?.name || "Unknown",
     isConnected: isClient && isConnected,
-    disconnectAsync,
+    disconnectWallet,
     isInstalled,
-    connectAsync,
+    connectWallet,
     connectors,
     isConnectLoading,
   };

@@ -73,7 +73,7 @@ export default function Header() {
         "fixed top-0 z-40 w-full transition-all duration-300",
         isScrolled
           ? "bg-[#11120E]/90 backdrop-blur-md shadow-md"
-          : "bg-transparent"
+          : "bg-transparent",
       )}
     >
       <div className="w-full mx-auto flex h-16 items-center justify-between px-4">
@@ -91,7 +91,9 @@ export default function Header() {
               href={route.href}
               className={cn(
                 "text-sm font-medium transition-colors hover:text-[#EBEBEB]",
-                pathname === route.href ? "text-[#EBEBEB]" : "text-[#EBEBEB]/70"
+                pathname === route.href
+                  ? "text-[#EBEBEB]"
+                  : "text-[#EBEBEB]/70",
               )}
             >
               {route.label}
@@ -107,7 +109,7 @@ export default function Header() {
                   "text-sm font-medium transition-colors hover:text-[#EBEBEB]",
                   pathname === route.href
                     ? "text-[#EBEBEB]"
-                    : "text-[#EBEBEB]/70"
+                    : "text-[#EBEBEB]/70",
                 )}
               >
                 {route.label}
@@ -149,7 +151,7 @@ export default function Header() {
               <Button
                 asChild
                 size="sm"
-                className="text-[#EBEBEB]/70 bg-gradient-to-r from-[#121C2B] to-[#11120E] border border-[#EBEBEB]/20 hover:border-[#EBEBEB]/40"
+                className="text-[#EBEBEB]/70 bg-linear-to-r from-[#121C2B] to-[#11120E] border border-[#EBEBEB]/20 hover:border-[#EBEBEB]/40"
               >
                 <Link href="/login">Login</Link>
               </Button>
@@ -229,7 +231,7 @@ export default function Header() {
                           "block py-2 text-sm font-medium transition-colors hover:text-[#EBEBEB]",
                           pathname === route.href
                             ? "text-[#EBEBEB]"
-                            : "text-[#EBEBEB]/70"
+                            : "text-[#EBEBEB]/70",
                         )}
                       >
                         {route.label}
@@ -246,7 +248,7 @@ export default function Header() {
                             "block py-2 text-sm font-medium transition-colors hover:text-[#EBEBEB]",
                             pathname === route.href
                               ? "text-[#EBEBEB]"
-                              : "text-[#EBEBEB]/70"
+                              : "text-[#EBEBEB]/70",
                           )}
                         >
                           {route.label}
@@ -261,7 +263,7 @@ export default function Header() {
                       <Link href="/login" className="flex-1">
                         <Button
                           size="sm"
-                          className="text-[#EBEBEB]/70 bg-gradient-to-r from-[#121C2B] to-[#11120E] border border-[#EBEBEB]/20 hover:border-[#EBEBEB]/40 w-full"
+                          className="text-[#EBEBEB]/70 bg-linear-to-r from-[#121C2B] to-[#11120E] border border-[#EBEBEB]/20 hover:border-[#EBEBEB]/40 w-full"
                         >
                           Login
                         </Button>
