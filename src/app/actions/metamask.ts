@@ -3,8 +3,8 @@
 import { randomBytes } from "crypto";
 import { verifyMessage } from "ethers";
 
-import { createSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { createSession } from "@/lib/session";
 
 export async function getWalletNonce(address: string) {
   try {
@@ -113,7 +113,7 @@ export async function verifyWalletLogin(address: string, signature: string) {
 export async function linkWalletToUser(
   address: string,
   signature: string,
-  userId: string
+  userId: string,
 ) {
   try {
     let wallet = await db.wallet.findUnique({

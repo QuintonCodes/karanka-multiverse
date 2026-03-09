@@ -1,8 +1,8 @@
 "use server";
 
-import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { accountSchema, avatarSchema } from "@/lib/schemas/account";
+import { getSession } from "@/lib/session";
 
 export async function uploadAvatar(formData: FormData) {
   const file = formData.get("avatar");

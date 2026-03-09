@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
-import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { getSession } from "@/lib/session";
 
 export async function GET() {
   const session = await getSession();
@@ -9,7 +9,7 @@ export async function GET() {
   if (!session?.email) {
     return NextResponse.json(
       { user: null, isAuthenticated: false },
-      { status: 401 }
+      { status: 401 },
     );
   }
 

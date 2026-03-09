@@ -1,6 +1,6 @@
 "use server";
 
-import { createSession, hashPassword, verifyPassword } from "@/lib/auth";
+import { hashPassword, verifyPassword } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
   loginSchema,
@@ -9,6 +9,7 @@ import {
   verifySchema,
 } from "@/lib/schemas/auth";
 import { sendVerificationEmail } from "@/lib/services/email-service";
+import { createSession } from "@/lib/session";
 
 async function generateAndStoreOtp(email: string): Promise<string> {
   const otpCode = Math.floor(100000 + Math.random() * 900000).toString();

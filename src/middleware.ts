@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { decrypt } from "./lib/auth";
+import { decrypt } from "./lib/session";
 
 const protectedRoutes = [
   "/account",
@@ -12,7 +12,7 @@ const protectedRoutes = [
 export async function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
   const isProtectedRoute = protectedRoutes.some(
-    (route) => path === route || path.startsWith(route + "/")
+    (route) => path === route || path.startsWith(route + "/"),
   );
 
   const cookie = req.cookies.get("session")?.value;
