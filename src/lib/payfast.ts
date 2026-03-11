@@ -79,7 +79,10 @@ const config: PayFastConfig = {
     process.env.NODE_ENV !== "production"
       ? process.env.PAYFAST_SANDBOX_MERCHANT_KEY!
       : process.env.PAYFAST_MERCHANT_KEY!,
-  passphrase: process.env.PAYFAST_PASSPHRASE!,
+  passphrase:
+    process.env.NODE_ENV !== "production"
+      ? process.env.PAYFAST_SANDBOX_PASSPHRASE!
+      : process.env.PAYFAST_PASSPHRASE!,
   sandbox: process.env.NODE_ENV !== "production",
 };
 
@@ -93,23 +96,32 @@ export function getPayFastUrl() {
     : "https://www.payfast.co.za/eng/process";
 }
 
-export function generateSignature(data: Record<string, string>): string {
-  // Create parameter string
-  const paramString = Object.keys(data)
-    .filter((key) => key !== "signature")
-    .sort()
-    .map(
-      (key) => `${key}=${encodeURIComponent(data[key]).replace(/%20/g, "+")}`
-    )
-    .join("&");
+export function generateSignature(
+  data: Record<string, string>,
+  passphrase?: string,
+): string {
+  let pfOutput = "";
 
-  // Add passphrase if provided
-  const stringToHash = config.passphrase
-    ? `${paramString}&passphrase=${encodeURIComponent(config.passphrase)}`
-    : paramString;
+  // Loop through the data to create the parameter string
+  for (let key in data) {
+    // PayFast requires that empty fields NOT be included in the signature
+    if (data[key] !== undefined && data[key] !== null && data[key] !== "") {
+      // Encode URI component, but explicitly replace %20 with + for PayFast
+      const value = encodeURIComponent(data[key].trim()).replace(/%20/g, "+");
+      pfOutput += `${key}=${value}&`;
+    }
+  }
 
-  // Generate MD5 hash
-  return crypto.createHash("md5").update(stringToHash).digest("hex");
+  // Remove the trailing ampersand
+  let getString = pfOutput.slice(0, -1);
+
+  // Append passphrase if provided
+  if (passphrase) {
+    getString += `&passphrase=${encodeURIComponent(passphrase.trim()).replace(/%20/g, "+")}`;
+  }
+
+  // Hash the string using MD5
+  return crypto.createHash("md5").update(getString).digest("hex");
 }
 
 export function validateSignature(data: Record<string, string>): boolean {
@@ -119,7 +131,7 @@ export function validateSignature(data: Record<string, string>): boolean {
 }
 
 export async function validatePayment(
-  data: Record<string, string>
+  data: Record<string, string>,
 ): Promise<boolean> {
   if (!validateSignature(data)) {
     console.error("PayFast signature validation failed");
@@ -137,7 +149,7 @@ export async function validatePayment(
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
       },
-    }
+    },
   );
 
   return String(response.data).trim() === "VALID";
@@ -159,9 +171,12 @@ export function buildPayFastData({
     billingDate?: string;
   };
 }) {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL?.startsWith("http")
-    ? process.env.NEXT_PUBLIC_BASE_URL
-    : `https://${process.env.NEXT_PUBLIC_BASE_URL}`;
+  const baseUrl =
+    process.env.NODE_ENV !== "production"
+      ? "http://localhost:3000"
+      : process.env.NEXT_PUBLIC_BASE_URL?.startsWith("http")
+        ? process.env.NEXT_PUBLIC_BASE_URL
+        : `https://${process.env.NEXT_PUBLIC_BASE_URL}`;
 
   const merchantId = Number(config.merchantId);
 
@@ -209,10 +224,18 @@ export function buildPayFastData({
     Object.entries(payFastData).map(([key, value]) => [
       key,
       value !== undefined && value !== null ? String(value) : "",
-    ])
+    ]),
   );
 
-  const signature = generateSignature(payFastDataString);
+  const signature = generateSignature(payFastDataString, config.passphrase);
+
+  const cleanedPayFastData: Record<string, string> = {};
+
+  for (const [key, value] of Object.entries(payFastData)) {
+    if (value !== undefined && value !== null && value !== "") {
+      cleanedPayFastData[key] = String(value);
+    }
+  }
 
   return {
     ...payFastData,

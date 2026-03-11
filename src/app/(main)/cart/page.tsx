@@ -35,7 +35,7 @@ export default function CartPage() {
               Looks like you haven&apos;t added any products to your cart yet.
             </p>
             <Button
-              className="border border-[#EBEBEB]/20 bg-gradient-to-r from-[#121C2B] to-[#11120E] hover:border-[#EBEBEB]/40"
+              className="border border-[#EBEBEB]/20 bg-linear-to-r from-[#121C2B] to-[#11120E] hover:border-[#EBEBEB]/40"
               asChild
             >
               <Link href="/products">Browse Products</Link>
@@ -101,7 +101,7 @@ export default function CartPage() {
 
               {canCheckout ? (
                 <Button
-                  className="mt-4 w-full border border-[#EBEBEB]/20 bg-gradient-to-r from-[#121C2B] to-[#11120E] hover:border-[#EBEBEB]/40"
+                  className="mt-4 w-full border border-[#EBEBEB]/20 bg-linear-to-r from-[#121C2B] to-[#11120E] hover:border-[#EBEBEB]/40"
                   asChild
                 >
                   <Link href="/checkout">
@@ -111,7 +111,7 @@ export default function CartPage() {
                 </Button>
               ) : (
                 <Button
-                  className="mt-4 w-full border border-[#EBEBEB]/20 bg-gradient-to-r from-[#121C2B] to-[#11120E]"
+                  className="mt-4 w-full border border-[#EBEBEB]/20 bg-linear-to-r from-[#121C2B] to-[#11120E]"
                   disabled
                 >
                   Proceed to Checkout

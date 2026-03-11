@@ -80,7 +80,7 @@ export default function CheckoutForm({
               : "Token Purchase Failed",
             {
               description: "Validation failed.",
-            }
+            },
           );
         } else {
           toast.error(
@@ -89,7 +89,7 @@ export default function CheckoutForm({
               : "Token Purchase Failed",
             {
               description: result.error,
-            }
+            },
           );
         }
         return;
@@ -105,7 +105,7 @@ export default function CheckoutForm({
             checkoutType === "cart"
               ? "Your order has been placed successfully."
               : "Your token package has been purchased successfully.",
-        }
+        },
       );
 
       updateUser(data);
@@ -233,7 +233,7 @@ export default function CheckoutForm({
         <Button
           type="submit"
           disabled={formState.isSubmitting}
-          className="w-full border border-[#EBEBEB]/20 bg-gradient-to-r from-[#121C2B] to-[#11120E] hover:border-[#EBEBEB]/40"
+          className="w-full border border-[#EBEBEB]/20 bg-linear-to-r from-[#121C2B] to-[#11120E] hover:border-[#EBEBEB]/40"
         >
           {formState.isSubmitting ? (
             <>

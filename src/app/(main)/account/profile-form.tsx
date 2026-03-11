@@ -60,7 +60,7 @@ export default function ProfileForm({
     } catch (error) {
       console.error("Error updating account:", error);
       toast.error(
-        "Unexpected server error while updating account. Please try again later."
+        "Unexpected server error while updating account. Please try again later.",
       );
     }
   }
@@ -186,7 +186,7 @@ export default function ProfileForm({
         <Button
           type="submit"
           disabled={userForm.formState.isSubmitting}
-          className="bg-gradient-to-r from-[#121C2B] to-[#11120E] border border-[#EBEBEB]/20 hover:border-[#EBEBEB]/40"
+          className="bg-linear-to-r from-[#121C2B] to-[#11120E] border border-[#EBEBEB]/20 hover:border-[#EBEBEB]/40"
         >
           {userForm.formState.isSubmitting ? "Saving..." : "Save Changes"}
         </Button>

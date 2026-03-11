@@ -202,7 +202,7 @@ export default function RegisterForm() {
         <Button
           type="submit"
           disabled={registerForm.formState.isSubmitting}
-          className="w-full border border-[#EBEBEB]/20 bg-gradient-to-r from-[#121C2B] to-[#11120E] hover:border-[#EBEBEB]/40"
+          className="w-full border border-[#EBEBEB]/20 bg-linear-to-r from-[#121C2B] to-[#11120E] hover:border-[#EBEBEB]/40"
         >
           {registerForm.formState.isSubmitting ? (
             <>

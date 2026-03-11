@@ -111,7 +111,7 @@ export default function VerifyEmailForm({
         <Button
           type="submit"
           disabled={verifyForm.formState.isSubmitting || isExpired}
-          className="w-full border border-[#EBEBEB]/20 bg-gradient-to-r from-[#121C2B] to-[#11120E] hover:border-[#EBEBEB]/40"
+          className="w-full border border-[#EBEBEB]/20 bg-linear-to-r from-[#121C2B] to-[#11120E] hover:border-[#EBEBEB]/40"
         >
           {verifyForm.formState.isSubmitting ? (
             <>

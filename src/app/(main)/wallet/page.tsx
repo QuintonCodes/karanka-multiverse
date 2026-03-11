@@ -289,7 +289,7 @@ export default function WalletPage() {
             </div>
 
             {/* Portfolio Overview */}
-            <Card className="border-[#EBEBEB]/10 bg-linear-to-r from-yellow-500/10 to-orange-500/10">
+            <Card className="border-[#EBEBEB]/10 bg-linear-to-r from-yellow-500/70 to-orange-500/70">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>

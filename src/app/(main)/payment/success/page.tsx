@@ -26,56 +26,73 @@ export default function PaymentSuccessPage() {
     "loading" | "success" | "error"
   >("loading");
   const [paymentDetails, setPaymentDetails] = useState<PaymentDetails | null>(
-    null
+    null,
   );
 
   const transactionId = searchParams.get("txn") || "";
   const { updateUser } = useAuth();
 
   useEffect(() => {
-    async function processPayment() {
-      if (!transactionId) {
-        setPaymentStatus("error");
-        return;
-      }
+    if (!transactionId) {
+      setPaymentStatus("error");
+      return;
+    }
 
+    let isMounted = true;
+    let attempts = 0;
+    const maxAttempts = 10;
+
+    async function processPayment() {
       try {
-        const response = await axios.get(`/api/payments/${transactionId}`);
+        const response = await axios.get(
+          `/api/payments?transactionId=${transactionId}`,
+        );
         if (response.status !== 200) {
-          setPaymentStatus("error");
+          if (isMounted) setPaymentStatus("error");
           return;
         }
 
         const data = response.data;
 
         if (!data) {
-          setPaymentStatus("error");
+          if (isMounted) setPaymentStatus("error");
           return;
         }
 
         setPaymentDetails(data);
 
-        if (data.payment.status === "confirmed") {
-          setPaymentStatus("success");
+        if (data.status === "confirmed") {
+          if (isMounted) {
+            setPaymentDetails(data);
+            setPaymentStatus("success");
 
-          // If tokens purchased, update user wallet locally
-          if (
-            data.payment.productType === "tokenPackage" &&
-            data.payment.productTokens &&
-            data.payment.productTokens > 0
-          ) {
-            updateUser((prev) => ({
-              ...prev,
-              wallet: {
-                ...prev.wallet!,
-                balance:
-                  (Number(prev.wallet?.balance) || 0) +
-                  data.payment.productTokens!,
-              },
-            }));
+            // If tokens purchased, update user wallet locally
+            if (
+              data.productType === "tokenPackage" &&
+              data.productTokens &&
+              data.productTokens > 0
+            ) {
+              updateUser((prev) => ({
+                ...prev,
+                wallet: {
+                  ...prev.wallet!,
+                  balance:
+                    (Number(prev.wallet?.balance) || 0) + data.productTokens!,
+                },
+              }));
+            }
           }
-        } else {
-          setPaymentStatus("error");
+        }
+        // If still pending, the webhook hasn't finished. Wait 2 seconds and try again.
+        else if (data.status === "pending" && attempts < maxAttempts) {
+          attempts++;
+          if (isMounted) {
+            setTimeout(processPayment, 2000);
+          }
+        }
+        // If it failed, or we ran out of waiting attempts
+        else {
+          if (isMounted) setPaymentStatus("error");
         }
       } catch (error) {
         console.error("Error fetching payment:", error);
@@ -84,11 +101,15 @@ export default function PaymentSuccessPage() {
     }
 
     processPayment();
-  }, [searchParams, transactionId, updateUser]);
+
+    return () => {
+      isMounted = false; // Cleanup to prevent memory leaks if user navigates away
+    };
+  }, [transactionId, updateUser]);
 
   return (
     <MainSection className="mx-auto px-4 py-32">
-      <div className="max-w-md text-center">
+      <div className="flex items-center justify-center text-center">
         {paymentStatus === "loading" && (
           <div>
             <div className="mb-4 h-8 w-8 animate-spin rounded-full border-2 border-[#EBEBEB] border-t-transparent mx-auto"></div>
@@ -134,7 +155,7 @@ export default function PaymentSuccessPage() {
 
             <div className="space-y-4">
               <Button
-                className="w-full border border-[#EBEBEB]/20 bg-gradient-to-r from-[#121C2B] to-[#11120E] hover:border-[#EBEBEB]/40"
+                className="w-full border border-[#EBEBEB]/20 bg-linear-to-r from-[#121C2B] to-[#11120E] hover:border-[#EBEBEB]/40"
                 asChild
               >
                 <Link href="/">
@@ -168,7 +189,7 @@ export default function PaymentSuccessPage() {
 
             <div className="space-y-4">
               <Button
-                className="w-full border border-[#EBEBEB]/20 bg-gradient-to-r from-[#121C2B] to-[#11120E] hover:border-[#EBEBEB]/40"
+                className="w-full border border-[#EBEBEB]/20 bg-linear-to-r from-[#121C2B] to-[#11120E] hover:border-[#EBEBEB]/40"
                 asChild
               >
                 <Link href="/cart">Return to Cart</Link>

@@ -3,6 +3,7 @@
 import { Mail, MapPin, Phone } from "lucide-react";
 import Link from "next/link";
 import { FaInstagram, FaTwitter, FaWhatsapp } from "react-icons/fa";
+
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -121,7 +122,7 @@ export default function Footer() {
                 />
                 <Button
                   size="sm"
-                  className="bg-gradient-to-r from-[#121C2B] to-[#11120E] border border-[#EBEBEB]/20 hover:border-[#EBEBEB]/40"
+                  className="bg-linear-to-r from-[#121C2B] to-[#11120E] border border-[#EBEBEB]/20 hover:border-[#EBEBEB]/40"
                 >
                   Subscribe
                 </Button>

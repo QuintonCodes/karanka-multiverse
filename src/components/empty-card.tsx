@@ -22,8 +22,8 @@ export function EmptyCard({
   return (
     <Card
       className={cn(
-        "w-full max-w-md bg-gradient-to-b from-[#121C2B] to-[#11120E] border border-[#EBEBEB]/20 text-center shadow-md",
-        className
+        "w-full max-w-md bg-linear-to-b from-[#121C2B] to-[#11120E] border border-[#EBEBEB]/20 text-center shadow-md",
+        className,
       )}
     >
       <CardContent className="p-8">
@@ -37,7 +37,7 @@ export function EmptyCard({
             <Button
               asChild
               size="sm"
-              className="text-[#EBEBEB]/70 bg-gradient-to-r from-[#121C2B] to-[#11120E] border border-[#EBEBEB]/20 hover:border-[#EBEBEB]/40"
+              className="text-[#EBEBEB]/70 bg-linear-to-r from-[#121C2B] to-[#11120E] border border-[#EBEBEB]/20 hover:border-[#EBEBEB]/40"
             >
               <Link href="/login">Login</Link>
             </Button>

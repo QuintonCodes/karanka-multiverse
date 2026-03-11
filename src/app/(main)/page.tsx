@@ -109,7 +109,7 @@ export default function HomePage() {
         >
           <h1 className="mb-6 text-4xl font-extrabold tracking-tight text-[#EBEBEB] sm:text-5xl md:text-6xl">
             Welcome to the{" "}
-            <span className="bg-gradient-to-r from-[#121C2B]/50 to-[#191a14] bg-clip-text text-transparent">
+            <span className="bg-linear-to-r from-[#121C2B]/50 to-[#191a14] bg-clip-text text-transparent">
               Karanka Multiverse
             </span>
           </h1>
@@ -122,7 +122,7 @@ export default function HomePage() {
 
           {/* CTA Section */}
           {!isAuthenticated && (
-            <div className="rounded-2xl border border-[#EBEBEB]/10 bg-gradient-to-r from-[#121C2B]/50 to-[#11120E]/80 p-6 text-center max-w-xl mx-auto">
+            <div className="rounded-2xl border border-[#EBEBEB]/10 bg-linear-to-r from-[#121C2B]/50 to-[#11120E]/80 p-6 text-center max-w-xl mx-auto">
               <h4 className="mb-2 font-semibold text-[#EBEBEB]">
                 Ready to Start Trading?
               </h4>
@@ -140,7 +140,7 @@ export default function HomePage() {
                   </Button>
                 </Link>
                 <Link href="/products" className="flex-1">
-                  <Button className="w-full bg-gradient-to-r from-[#121C2B] to-[#11120E] border border-[#EBEBEB]/20 hover:border-[#EBEBEB]/40">
+                  <Button className="w-full bg-linear-to-r from-[#121C2B] to-[#11120E] border border-[#EBEBEB]/20 hover:border-[#EBEBEB]/40">
                     View Products
                   </Button>
                 </Link>
@@ -162,7 +162,7 @@ export default function HomePage() {
               {/* Performance Metrics & Features */}
               <div className="space-y-6">
                 {/* Performance Metrics */}
-                <div className="rounded-2xl border border-[#EBEBEB]/10 bg-gradient-to-br from-[#121C2B]/50 to-[#11120E]/80 p-6">
+                <div className="rounded-2xl border border-[#EBEBEB]/10 bg-linear-to-br from-[#121C2B]/50 to-[#11120E]/80 p-6">
                   <div className="mb-4 flex items-center space-x-2">
                     <BarChart3 className="h-5 w-5 text-[#EBEBEB]/70" />
                     <h4 className="font-semibold text-[#EBEBEB]">
@@ -265,7 +265,7 @@ export default function HomePage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
                 viewport={{ once: true }}
-                className="rounded-xl border border-[#EBEBEB]/10 bg-gradient-to-br from-[#121C2B]/50 to-[#11120E] p-6 transition-all duration-300 hover:border-[#EBEBEB]/20"
+                className="rounded-xl border border-[#EBEBEB]/10 bg-linear-to-br from-[#121C2B]/50 to-[#11120E] p-6 transition-all duration-300 hover:border-[#EBEBEB]/20"
               >
                 <FeatureCard feature={feature} />
               </motion.div>

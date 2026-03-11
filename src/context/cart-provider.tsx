@@ -1,7 +1,8 @@
-import { Product, ProductVariant } from "@/lib/products";
 import { createContext, useContext, useState } from "react";
 import { createStore, StoreApi, useStore } from "zustand";
 import { persist } from "zustand/middleware";
+
+import { Product, ProductVariant } from "@/lib/products";
 
 export type CartItem = Product & {
   quantity: number;
@@ -41,7 +42,7 @@ export default function CartProvider({
             if (currentItems.length > 0) {
               const cartType = getItemType(
                 currentItems[0],
-                currentItems[0].selectedVariant
+                currentItems[0].selectedVariant,
               );
               if (cartType !== newItemType) {
                 return;
@@ -51,7 +52,7 @@ export default function CartProvider({
             const existingItem = currentItems.find(
               (item) =>
                 item.id === product.id &&
-                (!variant || item.selectedVariant?.id === variant.id)
+                (!variant || item.selectedVariant?.id === variant.id),
             );
 
             if (existingItem) {
@@ -96,9 +97,9 @@ export default function CartProvider({
         }),
         {
           name: "karanka-cart",
-        }
-      )
-    )
+        },
+      ),
+    ),
   );
 
   return <CartContext.Provider value={store}>{children}</CartContext.Provider>;

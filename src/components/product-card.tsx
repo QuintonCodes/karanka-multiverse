@@ -47,7 +47,7 @@ export default function ProductCard({ product }: { product: Product }) {
       className="group futuristic-border glow-effect rounded-xl bg-[#11120E] transition-all duration-300"
       whileHover={{ y: -5 }}
     >
-      <div className="relative aspect-[4/3] w-full overflow-hidden">
+      <div className="relative aspect-4/3 w-full overflow-hidden">
         <Image
           src={product.image || "/placeholder.svg"}
           alt={product.name}
@@ -148,7 +148,7 @@ export default function ProductCard({ product }: { product: Product }) {
           className={`w-full border border-[#EBEBEB]/20 ${
             isInCart
               ? "bg-[#EBEBEB]/10 text-[#EBEBEB]/50"
-              : "bg-gradient-to-r from-[#121C2B] to-[#11120E] hover:border-[#EBEBEB]/40"
+              : "bg-linear-to-r from-[#121C2B] to-[#11120E] hover:border-[#EBEBEB]/40"
           }`}
         >
           <ShoppingCart className="mr-2 h-4 w-4" />

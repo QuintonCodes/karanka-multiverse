@@ -38,15 +38,15 @@ export function MainSection({
         duration: 10 + Math.random() * 20,
         left: Math.random() * 90 + 5 + "%",
         symbol: SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)],
-      }))
+      })),
     );
   }, []);
 
   return (
     <main
       className={cn(
-        "bg-gradient-to-b bg-[#11120E] from-[#11120E] to-[#121C2B] min-h-[90vh] relative w-full overflow-hidden",
-        className
+        "bg-linear-to-b bg-[#11120E] from-[#11120E]/10 to-[#121C2B]/10 min-h-[90vh] relative w-full overflow-hidden",
+        className,
       )}
     >
       <div className="absolute inset-0 grid-pattern opacity-20 pointer-events-none" />

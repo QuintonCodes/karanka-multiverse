@@ -73,10 +73,10 @@ export default function TradingSignals() {
   }, []);
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-[#EBEBEB]/10 bg-gradient-to-br from-[#121C2B]/80 to-[#11120E]/90 p-1 backdrop-blur-sm">
+    <div className="relative overflow-hidden rounded-2xl border border-[#EBEBEB]/10 bg-linear-to-br from-[#121C2B]/80 to-[#11120E]/90 p-1 backdrop-blur-sm">
       {/* Animated border */}
-      <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-[#EBEBEB]/20 via-transparent to-[#EBEBEB]/20 opacity-50">
-        <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-transparent via-[#EBEBEB]/10 to-transparent animate-pulse"></div>
+      <div className="absolute inset-0 rounded-2xl bg-linear-to-r from-[#EBEBEB]/20 via-transparent to-[#EBEBEB]/20 opacity-50">
+        <div className="absolute inset-0 rounded-2xl bg-linear-to-r from-transparent via-[#EBEBEB]/10 to-transparent animate-pulse"></div>
       </div>
 
       <div className="relative rounded-xl bg-[#11120E]/95 p-6">
@@ -184,7 +184,7 @@ export default function TradingSignals() {
                       width: `${mockSignals[activeSignal].confidence}%`,
                     }}
                     transition={{ duration: 1, delay: 0.2 }}
-                    className="h-full rounded-full bg-gradient-to-r from-green-400 to-blue-400"
+                    className="h-full rounded-full bg-linear-to-r from-green-400 to-blue-400"
                   />
                 </div>
               </div>
@@ -221,7 +221,7 @@ export default function TradingSignals() {
 
         {/* Action Button */}
         <Button
-          className="w-full bg-gradient-to-r from-[#121C2B] to-[#11120E] border border-[#EBEBEB]/20 hover:border-[#EBEBEB]/40"
+          className="w-full bg-linear-to-r from-[#121C2B] to-[#11120E] border border-[#EBEBEB]/20 hover:border-[#EBEBEB]/40"
           asChild
         >
           <Link href="/products">

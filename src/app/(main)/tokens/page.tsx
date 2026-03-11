@@ -131,7 +131,7 @@ export default function TokensPage() {
           initial={{ opacity: 0, y: 40 }}
           transition={{ delay: 0.4 }}
         >
-          <Card className="border-[#EBEBEB]/10 bg-gradient-to-br from-[#121C2B]/50 to-[#11120E]/80">
+          <Card className="border-[#EBEBEB]/10 bg-linear-to-br from-[#121C2B]/50 to-[#11120E]/80">
             <CardHeader className="text-center">
               <CardTitle className="text-2xl text-[#EBEBEB]">
                 How Tokens Work
@@ -156,7 +156,7 @@ export default function TokensPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
         >
-          <Card className="border-[#EBEBEB]/10 bg-gradient-to-r from-green-500/10 to-blue-500/10">
+          <Card className="border-[#EBEBEB]/10 bg-linear-to-r from-green-500/10 to-blue-500/10">
             <CardContent className="p-8 text-center">
               <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10">
                 <Shield className="h-8 w-8 text-green-400" />
@@ -201,13 +201,13 @@ function TokenPackageCard({
     <Card
       className={`relative h-full border transition-all duration-300 hover:border-[#EBEBEB]/40 hover:shadow-lg ${
         pkg.popular
-          ? "border-[#EBEBEB]/30 bg-gradient-to-b from-[#121C2B]/80 to-[#11120E] ring-2 ring-[#EBEBEB]/20"
+          ? "border-[#EBEBEB]/30 bg-linear-to-b from-[#121C2B]/80 to-[#11120E] ring-2 ring-[#EBEBEB]/20"
           : "border-[#EBEBEB]/10 bg-[#11120E]"
       }`}
     >
       {pkg.popular && (
         <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-          <Badge className="bg-gradient-to-r from-[#EBEBEB] to-[#EBEBEB]/80 text-[#11120E] font-semibold px-4 py-1">
+          <Badge className="bg-linear-to-r from-[#EBEBEB] to-[#EBEBEB]/80 text-[#11120E] font-semibold px-4 py-1">
             <Star className="mr-1 h-3 w-3" />
             Most Popular
           </Badge>
@@ -215,7 +215,7 @@ function TokenPackageCard({
       )}
 
       <CardHeader className="text-center pb-4">
-        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20">
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-linear-to-br from-blue-500/20 to-purple-500/20">
           <Zap className="h-8 w-8 text-blue-400" />
         </div>
         <CardTitle className="text-2xl text-[#EBEBEB]">{pkg.name}</CardTitle>
@@ -257,7 +257,7 @@ function TokenPackageCard({
               key={featureIndex}
               className="flex items-start text-sm text-[#EBEBEB]/80"
             >
-              <Check className="mr-3 mt-0.5 h-4 w-4 flex-shrink-0 text-green-400" />
+              <Check className="mr-3 mt-0.5 h-4 w-4 shrink-0 text-green-400" />
               <span>{feature}</span>
             </li>
           ))}
@@ -268,8 +268,8 @@ function TokenPackageCard({
           onClick={() => handlePurchase(pkg)}
           className={`w-full transition-all ${
             pkg.popular
-              ? "bg-gradient-to-r from-[#EBEBEB] to-[#EBEBEB]/90 text-[#11120E] hover:from-[#EBEBEB]/90 hover:to-[#EBEBEB]/80"
-              : "border border-[#EBEBEB]/20 bg-gradient-to-r from-[#121C2B] to-[#11120E] hover:border-[#EBEBEB]/40"
+              ? "bg-linear-to-r from-[#EBEBEB] to-[#EBEBEB]/90 text-[#11120E] hover:from-[#EBEBEB]/90 hover:to-[#EBEBEB]/80"
+              : "border border-[#EBEBEB]/20 bg-linear-to-r from-[#121C2B] to-[#11120E] hover:border-[#EBEBEB]/40"
           }`}
         >
           <ShoppingCart className="mr-2 h-4 w-4" />
@@ -284,7 +284,7 @@ function TokenPackageCard({
 function TokenStep({ item }: { item: TokenStepProps }) {
   return (
     <div className="text-center">
-      <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20">
+      <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-linear-to-br from-blue-500/20 to-purple-500/20">
         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#11120E] text-[#EBEBEB]">
           {item.icon}
         </div>

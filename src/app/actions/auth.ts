@@ -47,6 +47,38 @@ async function validateOtp(email: string, code: string): Promise<boolean> {
   return true;
 }
 
+function serializeUserDecimals(user: any) {
+  return {
+    ...user,
+    wallet: user.wallet
+      ? {
+          ...user.wallet,
+          balance: Number(user.wallet.balance),
+          valueZar: user.wallet.valueZar ? Number(user.wallet.valueZar) : null,
+        }
+      : null,
+    payments:
+      user.payments?.map((payment: any) => ({
+        ...payment,
+        amount: Number(payment.amount),
+        productTokens: Number(payment.productTokens),
+        productPrice: Number(payment.productPrice),
+      })) || [],
+    transactions:
+      user.transactions?.map((tx: any) => ({
+        ...tx,
+        amount: Number(tx.amount),
+      })) || [],
+    subscriptions:
+      user.subscriptions?.map((sub: any) => ({
+        ...sub,
+        amount: Number(sub.amount),
+        productTokens: Number(sub.productTokens),
+        productPrice: Number(sub.productPrice),
+      })) || [],
+  };
+}
+
 export async function registerUser(formData: FormData) {
   const data = {
     firstName: String(formData.get("firstName") ?? ""),
@@ -62,7 +94,7 @@ export async function registerUser(formData: FormData) {
     return {
       success: false,
       error: "Some of the form fields are invalid.",
-      details: validatedData.error.flatten().fieldErrors,
+      details: validatedData.error.message,
     };
   }
 
@@ -101,7 +133,9 @@ export async function registerUser(formData: FormData) {
     const { password: _password, ...safeUser } = user;
     void _password;
 
-    return { success: true, user: safeUser };
+    const serializedUser = serializeUserDecimals(safeUser);
+
+    return { success: true, user: serializedUser };
   } catch (error) {
     console.error("Registration error:", error);
     return {
@@ -123,7 +157,7 @@ export async function loginUser(formData: FormData) {
     return {
       success: false,
       error: "Some of the form fields are invalid.",
-      details: validatedData.error.flatten().fieldErrors,
+      details: validatedData.error.message,
     };
   }
 
@@ -168,7 +202,9 @@ export async function loginUser(formData: FormData) {
     const { password: _password, ...safeUser } = user;
     void _password;
 
-    return { success: true, user: safeUser };
+    const serializedUser = serializeUserDecimals(safeUser);
+
+    return { success: true, user: serializedUser };
   } catch (error) {
     console.error("Login error:", error);
     return {
@@ -190,7 +226,7 @@ export async function verifyEmail(formData: FormData) {
     return {
       success: false,
       error: "Invalid verification data.",
-      details: validatedData.error.flatten().fieldErrors,
+      details: validatedData.error.message,
     };
   }
 
@@ -223,9 +259,11 @@ export async function verifyEmail(formData: FormData) {
     const { password, ...safeUser } = user;
     void password;
 
+    const serializedUser = serializeUserDecimals(safeUser);
+
     return {
       success: true,
-      user: safeUser,
+      user: serializedUser,
     };
   } catch (error) {
     console.error("Verification error:", error);
@@ -244,7 +282,7 @@ export async function resendVerificationCode(formData: FormData) {
     return {
       success: false,
       error: "Invalid email address.",
-      details: validatedData.error.flatten().fieldErrors,
+      details: validatedData.error.message,
     };
   }
 
