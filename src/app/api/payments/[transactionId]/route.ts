@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 
 import { db } from "@/lib/db";
 
-export async function GET(req: Request) {
+export async function GET(
+  req: Request,
+  { params }: { params: Promise<{ transactionId: string }> },
+) {
   try {
-    const url = new URL(req.url);
-    const transactionId = url.searchParams.get("transactionId");
+    const { transactionId } = await params;
 
     if (!transactionId) {
       return NextResponse.json(

@@ -107,7 +107,13 @@ export function generateSignature(
     // PayFast requires that empty fields NOT be included in the signature
     if (data[key] !== undefined && data[key] !== null && data[key] !== "") {
       // Encode URI component, but explicitly replace %20 with + for PayFast
-      const value = encodeURIComponent(data[key].trim()).replace(/%20/g, "+");
+      const value = encodeURIComponent(data[key].trim())
+        .replace(/%20/g, "+")
+        .replace(
+          /[!'()*]/g,
+          (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`,
+        );
+
       pfOutput += `${key}=${value}&`;
     }
   }
@@ -117,7 +123,13 @@ export function generateSignature(
 
   // Append passphrase if provided
   if (passphrase) {
-    getString += `&passphrase=${encodeURIComponent(passphrase.trim()).replace(/%20/g, "+")}`;
+    const passValue = encodeURIComponent(passphrase.trim())
+      .replace(/%20/g, "+")
+      .replace(
+        /[!'()*]/g,
+        (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`,
+      );
+    getString += `&passphrase=${passValue}`;
   }
 
   // Hash the string using MD5
@@ -238,7 +250,7 @@ export function buildPayFastData({
   }
 
   return {
-    ...payFastData,
+    ...cleanedPayFastData,
     signature,
   };
 }

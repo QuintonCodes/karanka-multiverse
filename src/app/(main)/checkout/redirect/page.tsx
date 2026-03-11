@@ -24,17 +24,28 @@ export default async function RedirectCheckoutPage({
 
   if (!payment || !payment.user) return notFound();
 
+  // Determine if this specific payment is meant to be a subscription
+  const isSubscription = payment.productType === "subscription";
+
   // Build PayFast data
   const payfastDataRaw = buildPayFastData({
     data: {
       firstName: payment.user.firstName || "",
       lastName: payment.user.lastName || "",
       email: payment.user.email,
-      amount: payment.amount.toFixed(2),
+      amount: Number(payment.amount).toFixed(2),
       name: payment.productName || "Cart Purchase",
       description: payment.productName || "Cart Purchase",
     },
     transactionId,
+    isSubscription,
+    subscriptionDetails: isSubscription
+      ? {
+          recurringAmount: Number(payment.amount).toFixed(2),
+          frequency: 3, // PayFast frequency: 3 = Monthly
+          cycles: 0, // 0 = indefinite billing cycles
+        }
+      : undefined,
   });
 
   if (!payfastDataRaw) return notFound();
@@ -43,7 +54,7 @@ export default async function RedirectCheckoutPage({
     Object.entries(payfastDataRaw).map(([key, value]) => [
       key,
       value !== undefined && value !== null ? String(value) : "",
-    ])
+    ]),
   );
 
   return (

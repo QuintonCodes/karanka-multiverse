@@ -48,7 +48,7 @@ export async function checkoutCart(formData: FormData, cartItems: CartItem[]) {
   const mixedTypes = cartItems.some(
     (item) =>
       (item.selectedVariant?.isSubscription ?? item.isSubscription) !==
-      firstType
+      firstType,
   );
 
   if (mixedTypes) {
@@ -78,7 +78,10 @@ export async function checkoutCart(formData: FormData, cartItems: CartItem[]) {
         firstName,
         lastName,
         email,
-        amount: product.zarPrice.toFixed(2),
+        amount: (product.selectedVariant
+          ? product.selectedVariant.zarPrice
+          : (product.zarPrice ?? 0)
+        ).toFixed(2),
         name: isSubscription ? product.name : "Cart Purchase",
         description: isSubscription
           ? product.description || ""
@@ -171,7 +174,7 @@ export async function checkoutCart(formData: FormData, cartItems: CartItem[]) {
 // Token Package checkout
 export async function checkoutTokenPackage(
   formData: FormData,
-  tokenPackage: Package | null
+  tokenPackage: Package | null,
 ) {
   const validatedData = validatedCheckoutForm(formData);
 

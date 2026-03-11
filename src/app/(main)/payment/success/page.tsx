@@ -44,9 +44,7 @@ export default function PaymentSuccessPage() {
 
     async function processPayment() {
       try {
-        const response = await axios.get(
-          `/api/payments?transactionId=${transactionId}`,
-        );
+        const response = await axios.get(`/api/payments/${transactionId}`);
         if (response.status !== 200) {
           if (isMounted) setPaymentStatus("error");
           return;
